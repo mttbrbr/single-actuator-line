@@ -1,0 +1,35 @@
+// OpenFOAM.com v2412 velocity field
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volVectorField;
+    object      U;
+}
+
+dimensions      [0 1 -1 0 0 0 0];
+internalField   uniform (7 0 0);
+
+boundaryField
+{
+    inlet
+    {
+        type fixedValue;
+        value uniform (7 0 0);
+    }
+    outlet
+    {
+        type inletOutlet;
+        inletValue uniform (7 0 0);
+        value uniform (7 0 0);
+    }
+    ground { type noSlip; }
+    top
+    {
+        type fixedShearStress;
+        tau (0.228057524 0 0);
+        value uniform (7 0 0);
+    }
+    sides { type symmetry; }
+}
+

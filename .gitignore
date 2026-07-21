@@ -1,0 +1,34 @@
+# OpenFOAM generated data
+case/0/
+case/[1-9]*/
+case/processor*/
+case/polyMesh/
+case/constant/polyMesh/
+case/constant/boundaryData/
+case/postProcessing/
+case/log.*
+case/*.foam
+case/dynamicCode/
+
+# Generated configuration includes
+case/system/include/generated*.dict
+case/system/fvOptions
+case/system/topoSetDict
+case/system/snappyHexMeshDict
+case/system/blockMeshDict
+case/system/controlDict
+case/system/decomposeParDict
+
+# Mann boxes and Python artefacts
+inflow/
+*.nc
+*.turb
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+
+# Editors and OS
+.DS_Store
+*~
+

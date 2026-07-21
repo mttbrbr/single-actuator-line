@@ -1,0 +1,86 @@
+project:
+  name: phaseVI_four_turbine_LES
+  openfoam_version: v2412
+  turbinesfoam_tag: v0.3.0
+
+turbine:
+  diameter: 10.058
+  radius: 5.029
+  hub_height: 12.192
+  rotor_speed_rpm: 71.63
+  pitch_deg: 3.0
+  n_blades: 2
+  n_elements: 50
+  tip_speed_ratio: 5.3894
+  axis: [-1.0, 0.0, 0.0]
+  vertical_direction: [0.0, 0.0, 1.0]
+  gaussian_mesh_factor: 1.0
+  dynamic_stall: false
+
+layout:
+  seed: 20260715
+  coordinates_D:
+    - {name: T1, x: 0.0,  y: -0.7}
+    - {name: T2, x: 4.2,  y:  0.6}
+    - {name: T3, x: 8.7,  y: -0.2}
+    - {name: T4, x: 13.1, y:  0.9}
+  minimum_separation_D: 3.0
+
+domain_D:
+  x: [-5.0, 21.0]
+  y: [-4.0, 4.0]
+  z: [0.0, 5.0]
+
+mesh:
+  base_cells: [104, 32, 20]
+  inlet_slab_D:
+    min: [-5.0, -4.0, 0.0]
+    max: [-4.5,  4.0, 5.0]
+    level: 1
+  transition_D:
+    min: [-1.0, -2.5, 0.2]
+    max: [20.5,  2.5, 2.8]
+    level: 2
+  wake_core_D:
+    min: [-0.5, -1.75, 0.4]
+    max: [20.0,  1.75, 2.2]
+    level: 3
+  n_cells_between_levels: 2
+  max_global_cells: 7000000
+  target_cells: [4500000, 5500000]
+
+abl:
+  hub_velocity: 7.0
+  roughness_length: 0.03
+  von_karman: 0.41
+  turbulence_intensity: 0.10
+  kinematic_viscosity: 1.5e-5
+
+mann:
+  seed: 20260715
+  gamma: 3.9
+  length_scale_D: 0.7
+  high_frequency_compensation: 0
+  duration: 120.2
+  sample_dt: 0.1
+  dy_D: 0.125
+  dz_D: 0.125
+  double_xyz: [false, true, true]
+  n_cpu: 1
+
+run:
+  end_time: 120.0
+  statistics_start: 60.0
+  initial_delta_t: 0.005
+  max_delta_t: 0.005
+  max_courant: 0.7
+  write_interval: 1.0
+  n_processors: 12
+
+smoke:
+  end_time: 0.25
+  max_courant: 0.8
+  base_cells: [52, 16, 10]
+  refinement_level_cap: 1
+  n_processors: 4
+

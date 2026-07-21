@@ -1,0 +1,17 @@
+extends: case.yaml
+
+project:
+  name: phaseVI_single_turbine_validation
+
+layout:
+  coordinates_D:
+    - {name: T1, x: 0.0, y: 0.0}
+
+mann:
+  duration: 30.2
+
+run:
+  end_time: 30.0
+  statistics_start: 10.0
+  write_interval: 0.5
+

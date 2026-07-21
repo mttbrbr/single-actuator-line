@@ -1,0 +1,24 @@
+// OpenFOAM.com v2412 LES configuration
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      turbulenceProperties;
+}
+
+simulationType LES;
+
+LES
+{
+    LESModel        WALE;
+    turbulence      on;
+    printCoeffs     on;
+    delta           cubeRootVol;
+
+    cubeRootVolCoeffs
+    {
+        deltaCoeff 1;
+    }
+}
+
