@@ -44,35 +44,34 @@ def validate_config(cfg: dict[str, Any]) -> None:
     if not math.isclose(diameter, 2.0 * radius, rel_tol=0, abs_tol=1e-9):
         raise ValueError("turbine.diameter must be exactly twice turbine.radius")
 
-    coords = cfg["layout"]["coordinates_D"]
-    names = [item["name"] for item in coords]
-    if len(names) != len(set(names)):
-        raise ValueError("turbine names must be unique")
-
-    minimum = float(cfg["layout"]["minimum_separation_D"])
-    for i, first in enumerate(coords):
-        for second in coords[i + 1 :]:
-            separation = math.hypot(
-                float(second["x"]) - float(first["x"]),
-                float(second["y"]) - float(first["y"]),
-            )
-            if separation < minimum:
-                raise ValueError(
-                    f"{first['name']} and {second['name']} are only "
-                    f"{separation:.3f}D apart; minimum is {minimum}D"
-                )
-
     xlim = cfg["domain_D"]["x"]
     ylim = cfg["domain_D"]["y"]
     zlim = cfg["domain_D"]["z"]
     hub_D = float(turbine["hub_height"]) / diameter
-    for item in coords:
-        if not (xlim[0] + 0.5 < item["x"] < xlim[1] - 0.5):
-            raise ValueError(f"{item['name']} rotor is outside the x-domain")
-        if not (ylim[0] + 0.5 < item["y"] < ylim[1] - 0.5):
-            raise ValueError(f"{item['name']} rotor is outside the y-domain")
+    position = turbine["position_D"]
+    if not (xlim[0] + 0.5 < position[0] < xlim[1] - 0.5):
+        raise ValueError("T1 rotor is outside the x-domain")
+    if not (ylim[0] + 0.5 < position[1] < ylim[1] - 0.5):
+        raise ValueError("T1 rotor is outside the y-domain")
     if hub_D - 0.5 <= zlim[0] or hub_D + 0.5 >= zlim[1]:
         raise ValueError("rotor disk intersects the ground or top boundary")
+
+    for axis in ("x", "y", "z"):
+        mesh_axis = cfg["mesh"][axis]
+        breaks = [float(value) for value in mesh_axis["breaks_D"]]
+        cells = [int(value) for value in mesh_axis["cells"]]
+        grading = [float(value) for value in mesh_axis["grading"]]
+        if len(breaks) != len(cells) + 1 or len(cells) != len(grading):
+            raise ValueError(f"mesh.{axis} entries have inconsistent lengths")
+        if any(b <= a for a, b in zip(breaks, breaks[1:])):
+            raise ValueError(f"mesh.{axis}.breaks_D must be strictly increasing")
+        if any(value <= 0 for value in cells + grading):
+            raise ValueError(f"mesh.{axis} cells and grading must be positive")
+        if (
+            not math.isclose(breaks[0], float(cfg["domain_D"][axis][0]))
+            or not math.isclose(breaks[-1], float(cfg["domain_D"][axis][1]))
+        ):
+            raise ValueError(f"mesh.{axis} must span the complete domain")
 
     if float(cfg["run"]["statistics_start"]) >= float(cfg["run"]["end_time"]):
         raise ValueError("statistics_start must precede end_time")
@@ -114,14 +113,14 @@ def mean_velocity(cfg: dict[str, Any], z: float) -> float:
 def turbine_positions(cfg: dict[str, Any]) -> list[dict[str, float | str]]:
     diameter = float(cfg["turbine"]["diameter"])
     hub = float(cfg["turbine"]["hub_height"])
+    position = cfg["turbine"]["position_D"]
     return [
         {
-            "name": item["name"],
-            "x": float(item["x"]) * diameter,
-            "y": float(item["y"]) * diameter,
+            "name": "T1",
+            "x": float(position[0]) * diameter,
+            "y": float(position[1]) * diameter,
             "z": hub,
         }
-        for item in cfg["layout"]["coordinates_D"]
     ]
 
 

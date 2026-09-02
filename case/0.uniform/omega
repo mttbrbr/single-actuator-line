@@ -1,0 +1,35 @@
+// OpenFOAM.com v2412 specific dissipation rate field
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    object      omega;
+}
+
+dimensions      [0 0 -1 0 0 0 0];
+internalField   uniform 0.3176689821;
+
+boundaryField
+{
+    inlet
+    {
+        type fixedValue;
+        value uniform 0.3176689821;
+    }
+    outlet
+    {
+        type inletOutlet;
+        inletValue uniform 0.3176689821;
+        value uniform 0.3176689821;
+    }
+    ground
+    {
+        type omegaWallFunction;
+        kappa 0.41;
+        Cmu 0.09;
+        value uniform 0.3176689821;
+    }
+    top { type zeroGradient; }
+    sides { type symmetry; }
+}

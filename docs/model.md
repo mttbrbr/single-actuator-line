@@ -1,89 +1,71 @@
 # Physical and numerical model
 
-## Coordinate system and layout
+## Geometry and actuator line
 
-The mean wind is aligned with `+x`, `y` is the cross-wind direction and `z` is
-vertical. The actuator-line rotation axis is therefore `(-1 0 0)`. Turbine
-coordinates in `config/case.yaml` are expressed in rotor diameters and are
-converted to metres by `tools/generate_case.py`.
+The mean wind is aligned with +x, y is cross-wind and z is vertical. The
+single turbine T1 is centred at (0, 0, 12.192 m) and its rotation axis is
+(-1 0 0).
 
-The layout is deterministic rather than re-randomised for every run. Seed
-`20260715` records its provenance; the resolved coordinates are committed in
-the YAML file so results can always be reproduced.
+The NREL Phase VI rotor has diameter 10.058 m, two tapered and twisted S809
+blades, fixed speed 71.63 rpm and 3 degree pitch. The blade table remains in
+the NREL feather-positive convention; the generator writes -(twist + pitch)
+for turbinesFoam. The cylindrical root uses a drag-only profile and the
+measured S809 Reynolds-one-million polar is extended to [-180, 180] degrees
+for startup robustness.
 
-## NREL Phase VI rotor
+The actuator-line implementation is not part of this repository.
+libturbinesFoam.so must already be compiled for OpenFOAM.com v2412. The case
+loads it at runtime and retains only the required fvOptions, blade geometry
+and polar input.
 
-The rotor model follows NREL/TP-500-29955:
+## Structured mesh
 
-- standard-tip diameter 10.058 m and hub height 12.192 m;
-- two tapered and twisted S809 blades;
-- fixed 71.63 rpm operation and 3 degree operator pitch;
-- upwind rotor, zero cone, zero tilt.
+The domain is [-5D, 15D] x [-4D, 4D] x [0, 5D]. blockMesh creates a conformal
+3-by-3-by-2 arrangement of 18 Cartesian blocks. The central rotor and wake
+region extends from -0.5D to 8D, -1.5D to 1.5D, and from the ground to 2D; its
+spacing is uniform at D/32 = 0.3143 m. Geometric grading in the outer blocks
+stays below approximately 4.2% per cell.
 
-`data/turbines/phaseVI_blade.csv` transcribes Table A-1. NREL defines positive
-twist and pitch towards feather, while the axial-flow element convention in
-`turbinesFoam` has the opposite sign. The generator therefore writes
-`-(twist + 3 degrees)` to `elementData`; the source CSV remains in the report
-convention. The cylindrical/transition root uses a cylinder drag profile;
-S809 is assigned from approximately `r=1.26 m` to the tip.
+The production mesh has 6,674,304 cells. Every cell must be a hexahedron and
+maximum non-orthogonality must be numerical zero. topoSet only creates the T1
+source selection and does not modify the mesh.
 
-`data/airfoils/S809_Re1M_extended` uses the measured 1-million-Reynolds-number
-coefficients in Tables A-7 and A-8 in the operating range. Values at large
-positive and negative incidence are an explicit conservative extension. They
-prevent unsafe linear extrapolation if a start-up transient produces an
-unusual angle of attack, but must not be treated as measured data.
+## IDDES and numerics
 
-## LES and actuator-line resolution
+The turbulence closure is kOmegaSSTIDDES, selected under simulationType LES,
+with IDDESDelta. It uses the k-omega SST branch in shielded near-wall regions
+and resolves LES content where the mesh permits it.
 
-The production mesh uses `D/32 = 0.3143 m` in the rotor/wake core and `D/16`
-in its transition. With `GaussianCoeffs.meshFactor=1`, the mesh contribution
-to the turbinesFoam Gaussian width is approximately `2 delta`, or `0.63 m` in
-the core. Two buffer cells are requested between refinement levels. The
-verified mesh contains 4,929,992 cells; standard `checkMesh` reports `Mesh OK`
-with maximum non-orthogonality 25.24 degrees and maximum skewness 0.333.
+Velocity convection is centred. The transported k and omega equations use
+bounded convection. Gradients are linear and Laplacian/snGrad schemes are
+orthogonal. Since the mesh is Cartesian, nNonOrthogonalCorrectors is zero. The
+timestep is limited to 0.005 s and the Courant number to 0.7.
 
-The WALE sub-grid model uses `cubeRootVol` as its LES filter width. Spatial
-convection is centred (`Gauss linear`) and gradients are limited only where
-needed for robustness. The time step is limited to 0.005 s and Courant number
-0.7, giving about 167 time steps per rotor revolution.
+## Neutral ABL and boundary conditions
 
-## Neutral ABL and Mann inlet
+The inlet mean is:
 
-The mean profile is
+    U(z) = u*/kappa log((z + z0)/z0)
 
-```text
-U(z) = u*/kappa log((z + z0)/z0)
-```
+with z0 = 0.03 m, kappa = 0.41 and u* = 0.4775537 m/s, giving U(H) = 7 m/s.
+Hipersim generates resolved Mann fluctuations with Gamma = 3.9, L = 0.7D,
+fixed seed and 10% longitudinal TI.
 
-with `z0=0.03 m`, `kappa=0.41` and `u*=0.47755 m/s`, selected so that
-`U(H)=7 m/s`. The ground uses `atmNutkWallFunction`; the upper patch applies
-the matching kinematic shear stress `u*^2=0.22806 m2/s2`.
+At the production inlet, U uses timeVaryingMappedFixedValue; k and omega use
+the OpenFOAM atmospheric equilibrium profiles atmBoundaryLayerInletK and
+atmBoundaryLayerInletOmega. Thus 10% denotes the resolved longitudinal Mann
+component and is not an upper bound on total resolved-plus-modelled
+turbulence.
 
-Hipersim generates the actual Mann spectral field with `Gamma=3.9`,
-`L=0.7D`, target longitudinal TI 10%, fixed seed and no high-frequency
-compensation. The longitudinal spacing is `U(H)*0.1 s=0.7 m`. The generated
-FFT box is 2048x64x40; 1203 planes are exported without longitudinal wrapping.
-The converter adds the log profile to each plane and writes OpenFOAM
-`timeVaryingMappedFixedValue` data.
+The ground uses noSlip, kqRWallFunction, omegaWallFunction and
+atmNutkWallFunction. The top applies the equilibrium kinematic shear
+u*^2 = 0.2280575 m2/s2; lateral faces are symmetry. Pressure is fixed to zero
+at the outlet and has zero normal gradient elsewhere. Outlet velocity uses a
+zero-valued backflow condition.
 
-The spectral box is generated with `n_cpu=1`. This avoids Hipersim's
-version-dependent structured-array path in its multiprocessing random-number
-generator; solver parallelism remains independent at 12 MPI ranks.
-The finite realisation is then scaled uniformly in all three components so
-its longitudinal standard deviation is exactly the requested 10% of hub
-velocity. Raw TI, scale factor and effective `alphaepsilon` are recorded in
-`boundaryData/manifest.json`.
+## Sampling
 
-This is a homogeneous Mann fluctuation field superimposed on an inhomogeneous
-mean ABL. It is not a precursor LES and does not prescribe height-dependent
-Reynolds stresses. The first 60 s are therefore discarded as inflow and wake
-adjustment.
-
-## Validation gate
-
-Before accepting farm statistics, use the same mesh resolution and ALM setup
-with only T1 active. At 7 m/s compare mean thrust and power coefficients with
-the corresponding Phase VI data. The initial acceptance band is +/-15%.
-Failure of this gate must be addressed through polar/pitch/sign and grid-width
-checks; do not tune the four-turbine result directly.
-
+The run lasts 30 s and statistics start at 10 s. Centreline probes and cutting
+planes are written at 1D, 2D, 4D, 6D and 8D downstream. This duration is suited
+to preliminary single-turbine assessment; longer runs are required for
+statistically converged atmospheric-wake conclusions.

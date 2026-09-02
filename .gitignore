@@ -12,9 +12,9 @@ case/dynamicCode/
 
 # Generated configuration includes
 case/system/include/generated*.dict
+case/system/include/generatedMetadata.json
 case/system/fvOptions
 case/system/topoSetDict
-case/system/snappyHexMeshDict
 case/system/blockMeshDict
 case/system/controlDict
 case/system/decomposeParDict

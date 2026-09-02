@@ -1,60 +1,46 @@
-# LES wind-farm wake interaction case
+# Single-turbine ALM IDDES case
 
-Case OpenFOAM.com **v2412** for the interaction of four wind-turbine wakes.
-The NREL Phase VI turbines are represented with the actuator-line model from
-[`turbinesFoam`](https://github.com/turbinesFoam/turbinesFoam), while the
-production inlet is a Mann turbulence box generated with
-[`Hipersim`](https://hipersim.pages.windenergy.dtu.dk/hipersim/).
-
-The repository stores source configuration and scripts. Meshes, Mann planes,
-time directories and solver output are generated locally and intentionally
-excluded from Git.
+OpenFOAM.com **v2412** case for one NREL Phase VI wind turbine in a neutral
+atmospheric boundary layer. The rotor is represented by the actuator-line
+model from an externally compiled libturbinesFoam.so; this repository
+contains only case configuration, turbine input data and workflow tools.
 
 ## Reference configuration
 
-- Four NREL Phase VI rotors: `D = 10.058 m`, `H = 12.192 m`, two S809 blades.
-- Fixed rotor speed `71.63 rpm`, pitch `3 deg`, hub-height wind `7 m/s`.
-- Neutral logarithmic ABL, `z0 = 0.03 m`, target hub-height TI `10%`.
-- LES-WALE with `pimpleFoam`, 120 s total and statistics over 60–120 s.
-- Verified production mesh: 4,929,992 cells, `D/32` in the rotor/wake core.
+- One NREL Phase VI rotor at (x/D, y/D) = (0, 0): D = 10.058 m,
+  H = 12.192 m, two S809 blades.
+- Fixed rotor speed 71.63 rpm, pitch 3 deg, hub-height wind 7 m/s.
+- Neutral logarithmic ABL, z0 = 0.03 m, with a Mann inlet at 10% resolved
+  longitudinal turbulence intensity.
+- k-omega SST IDDES with pimpleFoam, 30 s total and statistics over 10–30 s.
+- Orthogonal, fully hexahedral 18-block mesh with 6,674,304 cells and D/32
+  rotor/wake core resolution.
 
-Geometry and measured airfoil data are sourced from the NREL report
-*Unsteady Aerodynamics Experiment Phase VI: Wind Tunnel Test Configurations
-and Available Data Campaigns*, NREL/TP-500-29955. See
-[`docs/model.md`](docs/model.md) for conventions and limitations.
+Meshes, Mann planes, time directories and solver output are generated locally
+and excluded from Git.
 
 ## Quick start
 
-Open a shell with OpenFOAM.com v2412 sourced, then:
+Source OpenFOAM.com v2412 and ensure the already compiled library is available
+as $FOAM_USER_LIBBIN/libturbinesFoam.so, then run:
 
-```bash
-python3 -m pip install -r requirements.txt
-python3 tools/generate_case.py
-./scripts/check_environment.sh
-./scripts/build_turbinesfoam.sh
-./scripts/mesh.sh
-python3 tools/generate_mann_inflow.py
-./scripts/run_production.sh
-```
+    python3 -m pip install -r requirements.txt
+    python3 tools/generate_case.py
+    ./scripts/check_environment.sh
+    ./scripts/mesh.sh
+    python3 tools/generate_mann_inflow.py
+    ./scripts/run_production.sh
 
-For a cheap workflow check that does not require Hipersim:
+For a cheap numerical workflow check without Hipersim:
 
-```bash
-python3 tools/generate_case.py --profile smoke
-./scripts/run_smoke.sh
-```
-
-The smoke profile uses a coarser mesh, uniform inlet and a 0.25 s end time. It
-is a numerical integration test, not a physical result.
+    python3 tools/generate_case.py --profile smoke
+    ./scripts/run_smoke.sh
 
 ## Tests
 
-```bash
-python3 -m unittest discover -s tests -v
-python3 tools/generate_case.py --check
-python3 tools/generate_mann_inflow.py --dry-run
-```
+    python3 -m unittest discover -s tests -v
+    python3 tools/generate_case.py --check
+    python3 tools/generate_mann_inflow.py --dry-run
 
-After meshing, `./scripts/check_mesh.sh` enforces mesh quality and the cell
-count target. Large production runs are decomposed over 12 MPI ranks.
-
+See docs/model.md for model conventions and docs/workflow.md for acceptance
+checks.

@@ -23,7 +23,7 @@ boundaryField
     outlet
     {
         type inletOutlet;
-        inletValue uniform (7 0 0);
+        inletValue uniform (0 0 0);
         value uniform (7 0 0);
     }
     ground { type noSlip; }

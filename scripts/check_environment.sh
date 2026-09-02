@@ -11,16 +11,16 @@ if [[ "$actual" != "$expected" ]]; then
     exit 2
 fi
 
-for command in blockMesh snappyHexMesh topoSet checkMesh pimpleFoam decomposePar mpirun; do
+for command in blockMesh topoSet checkMesh pimpleFoam decomposePar mpirun; do
     command -v "$command" >/dev/null || { echo "ERROR: missing $command" >&2; exit 2; }
 done
 
-if [[ -f "${FOAM_USER_LIBBIN}/libturbinesFoam.so" ]]; then
-    echo "turbinesFoam library: ${FOAM_USER_LIBBIN}/libturbinesFoam.so"
-else
-    echo "WARNING: libturbinesFoam.so is not compiled for $expected." >&2
-    echo "Run ./scripts/build_turbinesfoam.sh" >&2
+library="${FOAM_USER_LIBBIN:-}/libturbinesFoam.so"
+if [[ ! -f "$library" ]]; then
+    echo "ERROR: externally compiled libturbinesFoam.so not found in FOAM_USER_LIBBIN." >&2
+    exit 2
 fi
+echo "turbinesFoam library: $library"
 
 python3 tools/generate_case.py --check
 echo "Environment and generated dictionaries are consistent."

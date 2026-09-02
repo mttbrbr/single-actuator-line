@@ -25,174 +25,132 @@ from case_config import (
 CASE = ROOT / "case"
 
 
-def scaled_box(box: dict, diameter: float) -> tuple[list[float], list[float]]:
-    return (
-        [float(value) * diameter for value in box["min"]],
-        [float(value) * diameter for value in box["max"]],
-    )
-
-
 def render_block_mesh(cfg: dict, profile: str) -> str:
     diameter = float(cfg["turbine"]["diameter"])
-    x0, x1 = (float(v) * diameter for v in cfg["domain_D"]["x"])
-    y0, y1 = (float(v) * diameter for v in cfg["domain_D"]["y"])
-    z0, z1 = (float(v) * diameter for v in cfg["domain_D"]["z"])
-    cells = cfg["mesh"]["base_cells"] if profile == "production" else cfg["smoke"]["base_cells"]
-    return foam_header("blockMeshDict") + f"""convertToMeters 1;
+    breaks = {
+        axis: [float(value) * diameter for value in cfg["mesh"][axis]["breaks_D"]]
+        for axis in ("x", "y", "z")
+    }
+    cells = {
+        axis: [
+            int(value)
+            for value in (
+                cfg["mesh"][axis]["cells"]
+                if profile == "production"
+                else cfg["smoke"]["cells"][axis]
+            )
+        ]
+        for axis in ("x", "y", "z")
+    }
+    grading = {
+        axis: [float(value) for value in cfg["mesh"][axis]["grading"]]
+        for axis in ("x", "y", "z")
+    }
 
-vertices
-(
-    ({x0:.8g} {y0:.8g} {z0:.8g})
-    ({x1:.8g} {y0:.8g} {z0:.8g})
-    ({x1:.8g} {y1:.8g} {z0:.8g})
-    ({x0:.8g} {y1:.8g} {z0:.8g})
-    ({x0:.8g} {y0:.8g} {z1:.8g})
-    ({x1:.8g} {y0:.8g} {z1:.8g})
-    ({x1:.8g} {y1:.8g} {z1:.8g})
-    ({x0:.8g} {y1:.8g} {z1:.8g})
-);
+    nx, ny, nz = (len(breaks[axis]) for axis in ("x", "y", "z"))
 
-blocks
-(
-    hex (0 1 2 3 4 5 6 7) ({cells[0]} {cells[1]} {cells[2]}) simpleGrading (1 1 1)
-);
+    def vertex(ix: int, iy: int, iz: int) -> int:
+        return (iz * ny + iy) * nx + ix
 
-edges ();
+    vertices = []
+    for z in breaks["z"]:
+        for y in breaks["y"]:
+            for x in breaks["x"]:
+                vertices.append(f"    ({x:.9g} {y:.9g} {z:.9g})")
 
-boundary
-(
-    inlet  {{ type patch; faces ((0 4 7 3)); }}
-    outlet {{ type patch; faces ((1 2 6 5)); }}
-    ground {{ type wall;  faces ((0 3 2 1)); }}
-    top    {{ type patch; faces ((4 5 6 7)); }}
-    sides  {{ type symmetry; faces ((0 1 5 4) (3 7 6 2)); }}
-);
+    blocks = []
+    inlet_faces = []
+    outlet_faces = []
+    ground_faces = []
+    top_faces = []
+    side_faces = []
+    for iz in range(nz - 1):
+        for iy in range(ny - 1):
+            for ix in range(nx - 1):
+                v000 = vertex(ix, iy, iz)
+                v100 = vertex(ix + 1, iy, iz)
+                v110 = vertex(ix + 1, iy + 1, iz)
+                v010 = vertex(ix, iy + 1, iz)
+                v001 = vertex(ix, iy, iz + 1)
+                v101 = vertex(ix + 1, iy, iz + 1)
+                v111 = vertex(ix + 1, iy + 1, iz + 1)
+                v011 = vertex(ix, iy + 1, iz + 1)
+                blocks.append(
+                    "    hex "
+                    f"({v000} {v100} {v110} {v010} {v001} {v101} {v111} {v011}) "
+                    f"({cells['x'][ix]} {cells['y'][iy]} {cells['z'][iz]}) "
+                    f"simpleGrading ({grading['x'][ix]:.9g} "
+                    f"{grading['y'][iy]:.9g} {grading['z'][iz]:.9g})"
+                )
+                if ix == 0:
+                    inlet_faces.append(f"            ({v000} {v001} {v011} {v010})")
+                if ix == nx - 2:
+                    outlet_faces.append(f"            ({v100} {v110} {v111} {v101})")
+                if iz == 0:
+                    ground_faces.append(f"            ({v000} {v010} {v110} {v100})")
+                if iz == nz - 2:
+                    top_faces.append(f"            ({v001} {v101} {v111} {v011})")
+                if iy == 0:
+                    side_faces.append(f"            ({v000} {v100} {v101} {v001})")
+                if iy == ny - 2:
+                    side_faces.append(f"            ({v010} {v011} {v111} {v110})")
 
-mergePatchPairs ();
-"""
+    def patch(name: str, patch_type: str, faces: list[str]) -> str:
+        return (
+            f"    {name}\n"
+            "    {\n"
+            f"        type {patch_type};\n"
+            "        faces\n"
+            "        (\n"
+            + "\n".join(faces)
+            + "\n        );\n"
+            "    }"
+        )
 
-
-def render_snappy(cfg: dict, profile: str) -> str:
-    diameter = float(cfg["turbine"]["diameter"])
-    cap = 99 if profile == "production" else int(cfg["smoke"]["refinement_level_cap"])
-    boxes = []
-    for key, name in (
-        ("inlet_slab_D", "inletSlab"),
-        ("transition_D", "transition"),
-        ("wake_core_D", "wakeCore"),
-    ):
-        item = cfg["mesh"][key]
-        minimum, maximum = scaled_box(item, diameter)
-        boxes.append((name, minimum, maximum, min(int(item["level"]), cap)))
-    location = [
-        float(cfg["domain_D"]["x"][0]) * diameter + 0.123 * diameter,
-        0.013 * diameter,
-        0.123 * diameter,
-    ]
-    geometry = "\n".join(
-        f"""    {name}
-    {{
-        type searchableBox;
-        min {foam_vector(minimum)};
-        max {foam_vector(maximum)};
-    }}"""
-        for name, minimum, maximum, _ in boxes
+    return (
+        foam_header("blockMeshDict")
+        + "scale 1;\n\nvertices\n(\n"
+        + "\n".join(vertices)
+        + "\n);\n\nblocks\n(\n"
+        + "\n".join(blocks)
+        + "\n);\n\nedges ();\n\nboundary\n(\n"
+        + "\n".join(
+            (
+                patch("inlet", "patch", inlet_faces),
+                patch("outlet", "patch", outlet_faces),
+                patch("ground", "wall", ground_faces),
+                patch("top", "patch", top_faces),
+                patch("sides", "symmetry", side_faces),
+            )
+        )
+        + "\n);\n\nmergePatchPairs ();\n"
     )
-    regions = "\n".join(
-        f"""        {name}
-        {{
-            mode inside;
-            levels ((1e15 {level}));
-        }}"""
-        for name, _, _, level in boxes
-        if level > 0
-    )
-    max_cells = int(cfg["mesh"]["max_global_cells"] if profile == "production" else 900000)
-    return foam_header("snappyHexMeshDict") + f"""castellatedMesh true;
-snap            false;
-addLayers       false;
-
-geometry
-{{
-{geometry}
-}}
-
-castellatedMeshControls
-{{
-    maxLocalCells 800000;
-    maxGlobalCells {max_cells};
-    minRefinementCells 0;
-    maxLoadUnbalance 0.10;
-    nCellsBetweenLevels {int(cfg['mesh']['n_cells_between_levels'])};
-    features ();
-    refinementSurfaces {{}}
-    resolveFeatureAngle 30;
-    refinementRegions
-    {{
-{regions}
-    }}
-    locationInMesh {foam_vector(location)};
-    allowFreeStandingZoneFaces true;
-}}
-
-snapControls
-{{
-    nSmoothPatch 3;
-    tolerance 2.0;
-    nSolveIter 30;
-    nRelaxIter 5;
-    nFeatureSnapIter 0;
-}}
-
-addLayersControls
-{{
-    relativeSizes true;
-    layers {{}}
-    expansionRatio 1.0;
-    finalLayerThickness 0.3;
-    minThickness 0.1;
-    nGrow 0;
-    featureAngle 60;
-    nRelaxIter 5;
-    nSmoothSurfaceNormals 1;
-    nSmoothNormals 3;
-    nSmoothThickness 10;
-    maxFaceThicknessRatio 0.5;
-    maxThicknessToMedialRatio 0.3;
-    minMedianAxisAngle 90;
-    nBufferCellsNoExtrude 0;
-    nLayerIter 50;
-}}
-
-meshQualityControls
-{{
-    #includeEtc "caseDicts/meshQualityDict"
-    relaxed {{ maxNonOrtho 75; }}
-}}
-
-writeFlags (scalarLevels);
-mergeTolerance 1e-6;
-"""
 
 
 def render_toposet(cfg: dict) -> str:
     diameter = float(cfg["turbine"]["diameter"])
-    entries = []
-    for turbine in turbine_positions(cfg):
-        p1 = [float(turbine["x"]) - 0.30 * diameter, float(turbine["y"]), float(turbine["z"])]
-        p2 = [float(turbine["x"]) + 0.30 * diameter, float(turbine["y"]), float(turbine["z"])]
-        entries.append(
-            f"""    {{
-        name {turbine['name']};
+    turbine = turbine_positions(cfg)[0]
+    minimum = (
+        float(turbine["x"]) - 0.5 * diameter,
+        float(turbine["y"]) - 1.0 * diameter,
+        0.0,
+    )
+    maximum = (
+        float(turbine["x"]) + 0.5 * diameter,
+        float(turbine["y"]) + 1.0 * diameter,
+        2.25 * diameter,
+    )
+    return foam_header("topoSetDict") + f"""actions
+(
+    {{
+        name T1;
         type cellSet;
         action new;
-        source cylinderToCell;
-        point1 {foam_vector(p1)};
-        point2 {foam_vector(p2)};
-        radius {0.75 * diameter:.8g};
-    }}"""
-        )
-    return foam_header("topoSetDict") + "actions\n(\n" + "\n".join(entries) + "\n);\n"
+        source boxToCell;
+        box {foam_vector(minimum)} {foam_vector(maximum)};
+    }}
+);
+"""
 
 
 def blade_element_data(cfg: dict) -> str:
@@ -354,7 +312,16 @@ def render_functions(cfg: dict) -> str:
         for name, point in planes
     )
     start = float(cfg["run"]["statistics_start"])
-    return f"""fieldAverage
+    return f"""QCriterion
+{{
+    type Q;
+    libs (fieldFunctionObjects);
+    field U;
+    executeControl writeTime;
+    writeControl writeTime;
+}}
+
+fieldAverage
 {{
     type fieldAverage;
     libs ("libfieldFunctionObjects.so");
@@ -423,7 +390,7 @@ endTime {float(run['end_time']):.8g};
 deltaT {float(cfg['run']['initial_delta_t']):.8g};
 writeControl adjustableRunTime;
 writeInterval {float(cfg['run']['write_interval'] if not smoke else run['end_time']):.8g};
-purgeWrite 0;
+purgeWrite {int(cfg['run'].get('purge_write', 0) if not smoke else 0)};
 writeFormat binary;
 writePrecision 10;
 writeCompression off;
@@ -452,8 +419,15 @@ def render_metadata(cfg: dict, profile: str) -> str:
     return json.dumps(
         {
             "profile": profile,
-            "layout_seed": cfg["layout"]["seed"],
             "turbines": turbine_positions(cfg),
+            "mesh_cells": math.prod(
+                sum(
+                    cfg["mesh"][axis]["cells"]
+                    if profile == "production"
+                    else cfg["smoke"]["cells"][axis]
+                )
+                for axis in ("x", "y", "z")
+            ),
             "tip_speed_ratio_computed": tip_speed_ratio(cfg),
             "friction_velocity": friction_velocity(cfg),
         },
@@ -465,7 +439,6 @@ def render_metadata(cfg: dict, profile: str) -> str:
 def outputs(cfg: dict, profile: str) -> dict[Path, str]:
     return {
         CASE / "system" / "blockMeshDict": render_block_mesh(cfg, profile),
-        CASE / "system" / "snappyHexMeshDict": render_snappy(cfg, profile),
         CASE / "system" / "topoSetDict": render_toposet(cfg),
         CASE / "system" / "fvOptions": render_fvoptions(cfg),
         CASE / "system" / "include" / "generatedFunctions.dict": render_functions(cfg),
@@ -513,4 +486,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

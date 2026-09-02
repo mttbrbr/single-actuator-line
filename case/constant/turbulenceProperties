@@ -1,4 +1,4 @@
-// OpenFOAM.com v2412 LES configuration
+// OpenFOAM.com v2412 k-omega SST IDDES configuration
 FoamFile
 {
     version     2.0;
@@ -11,14 +11,13 @@ simulationType LES;
 
 LES
 {
-    LESModel        WALE;
+    LESModel        kOmegaSSTIDDES;
     turbulence      on;
     printCoeffs     on;
-    delta           cubeRootVol;
+    delta           IDDESDelta;
 
-    cubeRootVolCoeffs
+    IDDESDeltaCoeffs
     {
-        deltaCoeff 1;
+        Cw          0.15;
     }
 }
-

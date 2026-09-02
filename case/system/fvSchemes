@@ -1,4 +1,4 @@
-// OpenFOAM.com v2412 LES schemes
+// OpenFOAM.com v2412 IDDES schemes for an orthogonal Cartesian mesh
 FoamFile
 {
     version     2.0;
@@ -14,20 +14,21 @@ ddtSchemes
 
 gradSchemes
 {
-    default         cellLimited Gauss linear 1;
-    grad(U)         Gauss linear;
+    default         Gauss linear;
 }
 
 divSchemes
 {
     default         none;
     div(phi,U)      Gauss linear;
+    div(phi,k)      bounded Gauss upwind;
+    div(phi,omega)  bounded Gauss upwind;
     div((nuEff*dev2(T(grad(U))))) Gauss linear;
 }
 
 laplacianSchemes
 {
-    default         Gauss linear limited 0.5;
+    default         Gauss linear orthogonal;
 }
 
 interpolationSchemes
@@ -37,11 +38,11 @@ interpolationSchemes
 
 snGradSchemes
 {
-    default         limited 0.5;
+    default         orthogonal;
 }
 
 wallDist
 {
     method          meshWave;
+    nRequired       true;
 }
-

@@ -1,28 +1,23 @@
 # Workflow and acceptance checks
 
-1. Source OpenFOAM.com v2412 and run `python3 tools/generate_case.py`.
-2. Run `scripts/check_environment.sh` and compile turbinesFoam v0.3.0 for
-   v2412 with `scripts/build_turbinesfoam.sh` if required.
-3. Run `scripts/mesh.sh`. Production mesh acceptance requires `Mesh OK` and
-   4.5–5.5 million cells.
-4. Install the pinned Python dependencies and run
-   `python3 tools/generate_mann_inflow.py`. Inspect
-   `case/constant/boundaryData/manifest.json`; realised longitudinal TI must be
-   10% after the documented uniform realisation scaling. The manifest also
-   preserves the raw TI and scale factor.
-5. Use `scripts/run_smoke.sh` after code changes. It deliberately leaves smoke
-   dictionaries in place; `run_production.sh` regenerates production ones.
-6. Run production with `scripts/run_production.sh`. The script refuses to run
-   without both an accepted mesh and Mann manifest.
-7. Run `python3 tools/postprocess_wakes.py` after completion. Cutting-plane VTK
-   data remain under `case/postProcessing/wakePlanes` for detailed wake-width
-   and meandering analysis.
+1. Source OpenFOAM.com v2412.
+2. Ensure $FOAM_USER_LIBBIN/libturbinesFoam.so already exists. No ALM source
+   checkout or build step belongs to this repository.
+3. Run python3 tools/generate_case.py and
+   python3 -m unittest discover -s tests -v.
+4. Run scripts/mesh.sh. Acceptance requires:
+   - Mesh OK;
+   - 6.6–6.8 million cells;
+   - all cells hexahedral;
+   - maximum non-orthogonality at numerical zero.
+5. Generate the 30.2 s Mann box with python3 tools/generate_mann_inflow.py.
+   Confirm 303 exported planes and 10% realised longitudinal TI in
+   boundaryData/manifest.json.
+6. Run scripts/check_environment.sh, prepare the Mann initial directory and
+   execute pimpleFoam -dry-run before a production launch.
+7. Run scripts/run_production.sh for the 30 s, 12-rank calculation.
+8. Post-process the T1 performance CSV and wake samples over 10–30 s.
 
-The production estimate is 24,000 time steps over roughly five million cells.
-The included 12-rank decomposition matches the local physical-core count, but
-the same case can be moved to a cluster by changing `run.n_processors` and
-regenerating the dictionaries.
-
-Generated Mann data can exceed hundreds of megabytes. `scripts/clean.sh`
-retains it while removing mesh, solver times and logs.
-
+scripts/clean.sh removes generated mesh, times, logs, post-processing and
+recognised Mann boundary data. Mann data with an unknown marker are refused
+rather than deleted.

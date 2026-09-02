@@ -92,12 +92,12 @@ def generate_box(cfg: dict, spec: dict):
 def write_boundary_data(cfg: dict, spec: dict, uvw: np.ndarray, alphaepsilon: float, output: Path) -> None:
     inlet = output / "inlet"
     if output.exists():
-        marker = output / ".wind-farm-mann-data"
+        marker = output / ".single-turbine-mann-data"
         if not marker.exists():
             raise RuntimeError(f"refusing to replace unrecognised directory: {output}")
         shutil.rmtree(output)
     inlet.mkdir(parents=True)
-    (output / ".wind-farm-mann-data").write_text("generated\n", encoding="utf-8")
+    (output / ".single-turbine-mann-data").write_text("generated\n", encoding="utf-8")
 
     diameter = float(cfg["turbine"]["diameter"])
     xmin = float(cfg["domain_D"]["x"][0]) * diameter

@@ -1,0 +1,33 @@
+// OpenFOAM.com v2412 turbulent kinetic energy field
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    object      k;
+}
+
+dimensions      [0 2 -2 0 0 0 0];
+internalField   uniform 0.7601917461;
+
+boundaryField
+{
+    inlet
+    {
+        type fixedValue;
+        value uniform 0.7601917461;
+    }
+    outlet
+    {
+        type inletOutlet;
+        inletValue uniform 0.7601917461;
+        value uniform 0.7601917461;
+    }
+    ground
+    {
+        type kqRWallFunction;
+        value uniform 0.7601917461;
+    }
+    top { type zeroGradient; }
+    sides { type symmetry; }
+}
