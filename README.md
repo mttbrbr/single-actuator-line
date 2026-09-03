@@ -167,3 +167,13 @@ This repository does not redistribute OpenFOAM or `turbinesFoam`. Their
 respective licences and citation requirements apply independently. When
 publishing results, cite OpenFOAM, `turbinesFoam`, the aerodynamic data source
 and the Mann turbulence methodology as appropriate.
+
+## License
+
+The original code and case configuration in this repository are distributed
+under the **GNU General Public License v3.0 or later**
+(`GPL-3.0-or-later`). See [`LICENSE`](LICENSE) for the complete terms.
+
+OpenFOAM, `turbinesFoam`, `hipersim` and third-party aerodynamic data remain
+the property of their respective copyright holders and are governed by their
+own licences and attribution requirements.
