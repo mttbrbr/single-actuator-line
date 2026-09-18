@@ -51,8 +51,9 @@ mann:
   high_frequency_compensation: 0
   duration: 57.7
   sample_dt: 0.1
-  dy_D: 0.125
-  dz_D: 0.125
+  # D/16 transverse sampling: three inlet samples across each D/48 core cell.
+  dy_D: 0.0625
+  dz_D: 0.0625
   double_xyz: [false, true, true]
   n_cpu: 1
 

@@ -10,8 +10,6 @@ import shutil
 import sys
 from pathlib import Path
 
-import numpy as np
-
 from case_config import DEFAULT_CONFIG, ROOT, load_config, mean_velocity
 
 
@@ -90,6 +88,8 @@ def generate_box(cfg: dict, spec: dict):
 
 
 def write_boundary_data(cfg: dict, spec: dict, uvw: np.ndarray, alphaepsilon: float, output: Path) -> None:
+    import numpy as np
+
     inlet = output / "inlet"
     if output.exists():
         marker = output / ".single-turbine-mann-data"
@@ -170,6 +170,8 @@ def main() -> int:
     if args.dry_run:
         return 0
 
+    import numpy as np
+
     field, alphaepsilon = generate_box(cfg, spec)
     # Hipersim stores uvw as (component, x, y, z).
     uvw = np.moveaxis(np.asarray(field.uvw), 0, -1)
@@ -184,4 +186,3 @@ if __name__ == "__main__":
     except (RuntimeError, ValueError) as error:
         print(f"error: {error}", file=sys.stderr)
         raise SystemExit(2)
-

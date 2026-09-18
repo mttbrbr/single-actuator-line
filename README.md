@@ -42,7 +42,7 @@ the actuator-line implementation.
 | Rotor speed / pitch | 71.63 rpm / 3° |
 | Hub-height mean wind | 7 m/s |
 | Atmospheric boundary layer | Neutral logarithmic profile, `z0 = 0.03 m` |
-| Resolved inlet turbulence | Mann model, 10% longitudinal TI |
+| Resolved inlet turbulence | Mann model, 10% longitudinal TI, `D/16` transverse sampling |
 | CFD solver | `pimpleFoam` |
 | Turbulence model | `kOmegaSSTIDDES` |
 | Production mesh | 22,525,776 hexahedral cells |

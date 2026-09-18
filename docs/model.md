@@ -49,7 +49,10 @@ The inlet mean is:
 
 with z0 = 0.03 m, kappa = 0.41 and u* = 0.4775537 m/s, giving U(H) = 7 m/s.
 Hipersim generates resolved Mann fluctuations with Gamma = 3.9, L = 0.7D,
-fixed seed and 10% longitudinal TI.
+fixed seed and 10% longitudinal TI. The transverse Mann grid uses D/16 spacing
+(128 by 80 points across the inlet), so the D/48 wake-core mesh has three CFD
+cells per imposed inlet spacing. This adds smaller resolved structures without
+changing the prescribed turbulence intensity.
 
 At the production inlet, U uses timeVaryingMappedFixedValue; k and omega use
 the OpenFOAM atmospheric equilibrium profiles atmBoundaryLayerInletK and
@@ -65,7 +68,7 @@ zero-valued backflow condition.
 
 ## Sampling
 
-The run lasts 30 s and statistics start at 10 s. Centreline probes and cutting
-planes are written at 1D, 2D, 4D, 6D and 8D downstream. This duration is suited
-to preliminary single-turbine assessment; longer runs are required for
+The run lasts 57.5 s and statistics start at 28.75 s. Centreline probes and
+cutting planes are written at 1D, 2D, 4D, 6D and 8D downstream. This duration
+is suited to preliminary single-turbine assessment; longer runs are required for
 statistically converged atmospheric-wake conclusions.

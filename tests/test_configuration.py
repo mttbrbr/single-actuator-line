@@ -64,9 +64,12 @@ class ConfigurationTests(unittest.TestCase):
 
     def test_mann_grid_covers_requested_duration(self):
         spec = grid_spec(self.cfg)
-        self.assertEqual(spec["Nxyz"], (1024, 64, 40))
+        self.assertEqual(spec["Nxyz"], (1024, 128, 80))
         self.assertEqual(spec["n_planes"], 578)
         self.assertGreaterEqual(spec["Nxyz"][0], spec["n_planes"])
+        diameter = self.cfg["turbine"]["diameter"]
+        self.assertAlmostEqual(spec["dxyz"][1], diameter / 16)
+        self.assertAlmostEqual(spec["dxyz"][2], diameter / 16)
 
 
 if __name__ == "__main__":
