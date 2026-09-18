@@ -78,6 +78,48 @@ def validate_config(cfg: dict[str, Any]) -> None:
     if float(cfg["mann"]["duration"]) < float(cfg["run"]["end_time"]):
         raise ValueError("Mann duration must cover the complete production run")
 
+    visualization = cfg.get("visualization", {})
+    if visualization.get("enabled", False):
+        if visualization.get("write_control") not in {"timeStep", "writeTime"}:
+            raise ValueError("visualization.write_control must be timeStep or writeTime")
+        if int(visualization.get("write_interval", 0)) < 1:
+            raise ValueError("visualization.write_interval must be at least one")
+        image_size = visualization.get("image_size", [])
+        if len(image_size) != 2 or any(int(value) <= 0 for value in image_size):
+            raise ValueError("visualization.image_size must contain two positive integers")
+        cross_image_size = visualization.get("cross_image_size", [])
+        if len(cross_image_size) != 2 or any(int(value) <= 0 for value in cross_image_size):
+            raise ValueError(
+                "visualization.cross_image_size must contain two positive integers"
+            )
+        for axis in ("x", "y"):
+            limits = visualization.get("view_D", {}).get(axis, [])
+            if len(limits) != 2 or float(limits[0]) >= float(limits[1]):
+                raise ValueError(f"visualization.view_D.{axis} must be increasing")
+            if (
+                float(limits[0]) < float(cfg["domain_D"][axis][0])
+                or float(limits[1]) > float(cfg["domain_D"][axis][1])
+            ):
+                raise ValueError(f"visualization.view_D.{axis} must lie inside the domain")
+        fields = visualization.get("fields", {})
+        if not fields:
+            raise ValueError("visualization.fields cannot be empty")
+        for name, settings in fields.items():
+            limits = settings.get("range", [])
+            if len(limits) != 2 or float(limits[0]) >= float(limits[1]):
+                raise ValueError(f"visualization.fields.{name}.range must be increasing")
+        offsets = [float(value) for value in visualization.get("horizontal_offsets_D", [])]
+        if len(offsets) != 3 or 0.0 not in offsets:
+            raise ValueError(
+                "visualization.horizontal_offsets_D must contain three planes including zero"
+            )
+        sections = [float(value) for value in visualization.get("cross_sections_D", [])]
+        if not sections or any(value <= 0 for value in sections):
+            raise ValueError("visualization.cross_sections_D must be positive")
+        cross_fields = visualization.get("cross_fields", [])
+        if not cross_fields or any(name not in fields for name in cross_fields):
+            raise ValueError("visualization.cross_fields must reference configured fields")
+
 
 def rotor_speed_rad_s(cfg: dict[str, Any]) -> float:
     return float(cfg["turbine"]["rotor_speed_rpm"]) * 2.0 * math.pi / 60.0
@@ -169,4 +211,3 @@ FoamFile
 
 def foam_vector(values: list[float] | tuple[float, ...]) -> str:
     return "(" + " ".join(f"{float(value):.9g}" for value in values) + ")"
-

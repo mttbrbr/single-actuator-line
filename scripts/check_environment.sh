@@ -24,4 +24,3 @@ echo "turbinesFoam library: $library"
 
 python3 tools/generate_case.py --check
 echo "Environment and generated dictionaries are consistent."
-

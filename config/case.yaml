@@ -66,6 +66,47 @@ run:
   purge_write: 64
   n_processors: 12
 
+visualization:
+  # Render saved fields after the CFD run.  In-solver VTK/X11 rendering makes
+  # the MPI calculation depend on a live desktop session and can abort it.
+  enabled: false
+  write_control: writeTime
+  write_interval: 1
+  # Cinematic aspect ratio matched to the physical extent below.  Keeping the
+  # two ratios equal prevents VTK from letterboxing the sampled plane.
+  image_size: [3840, 1440]
+  horizontal_offsets_D: [-0.25, 0.0, 0.25]
+  view_D:
+    x: [-0.5, 7.5]
+    y: [-1.5, 1.5]
+  cross_sections_D: [1, 2, 4, 6, 8]
+  cross_image_size: [3840, 1920]
+  cross_view_D:
+    y: [-1.5, 1.5]
+    z_offset: [-0.75, 0.75]
+  cross_fields: [velocity, vorticity]
+  fields:
+    velocity:
+      field: U
+      range: [4.0, 8.5]
+      title: "|U| [m/s]"
+      colour_map: coolToWarm
+    vorticity:
+      field: vorticity
+      range: [0.0, 2.0]
+      title: "|vorticity| [1/s]"
+      colour_map: fire
+    pressure_coefficient:
+      field: Cp
+      range: [-0.4, 0.8]
+      title: "Cp [-]"
+      colour_map: coolToWarm
+    q_criterion:
+      field: Q
+      range: [0.0, 0.5]
+      title: "Q [1/s2]"
+      colour_map: coolToWarm
+
 smoke:
   end_time: 0.25
   max_courant: 0.8

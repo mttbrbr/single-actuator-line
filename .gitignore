@@ -6,6 +6,7 @@ case/polyMesh/
 case/constant/polyMesh/
 case/constant/boundaryData/
 case/postProcessing/
+case/postProcessing-*/
 case/log.*
 case/*.foam
 case/dynamicCode/
@@ -28,7 +29,12 @@ __pycache__/
 .pytest_cache/
 .venv/
 
+# Locally generated plots and videos
+artifacts/
+videos/
+*_videos/
+*.mp4
+
 # Editors and OS
 .DS_Store
 *~
-

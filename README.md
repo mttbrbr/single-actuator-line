@@ -136,9 +136,37 @@ python3 tools/generate_mann_inflow.py
 ./scripts/run_production.sh
 ```
 
+If an existing production calculation is interrupted, resume it from the
+latest complete decomposed time without regenerating or decomposing the case:
+
+```bash
+make resume
+```
+
 The production script checks the mesh, prepares `case/0` from `case/0.mann`,
 runs `topoSet`, decomposes the domain and launches `pimpleFoam` in parallel.
 See [`docs/workflow.md`](docs/workflow.md) for the complete acceptance checks.
+
+During production, function objects write vorticity, pressure coefficient, Q,
+the native IDDES `LESRegion` diagnostic and wake-plane samples. In-solver VTK
+rendering is disabled by default because it requires an authorised X display
+and can abort an otherwise healthy MPI calculation. The optional render setup
+is retained under `visualization` in `config/case.yaml` for explicit
+post-processing use.
+
+Create a 2x2 H.264 video plus one video for each individual field:
+
+```bash
+python3 scripts/make_postprocessing_video.py -o videos
+```
+
+The script discovers every rendered perspective. Combined videos are written
+below `videos/main/`, while individual views are grouped below field folders
+such as `videos/velocity/` and `videos/vorticity/`. It uses only times common
+to the fields in each view and ignores stale images with a different
+resolution. Use `--fps`, `--start`, `--end` and `--width` to control the
+animation. The `--combined-only` and `--single-only` flags limit the outputs;
+`--dry-run` reports the selected frames without requiring `ffmpeg`.
 
 ## Useful commands
 
@@ -149,6 +177,7 @@ make check-env   # validate OpenFOAM and turbinesFoam
 make mesh        # build and validate the production mesh
 make smoke       # execute the coarse uniform-inflow smoke test
 make mann        # generate Mann boundaryData
+make resume      # resume an existing 12-rank decomposed run
 make clean       # remove generated simulation data
 ```
 

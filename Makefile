@@ -1,4 +1,4 @@
-.PHONY: generate test check-env mesh smoke mann clean
+.PHONY: generate test check-env mesh smoke mann resume clean
 
 generate:
 	python3 tools/generate_case.py
@@ -20,6 +20,8 @@ smoke:
 mann:
 	python3 tools/generate_mann_inflow.py
 
+resume:
+	./scripts/resume_production.sh
+
 clean:
 	./scripts/clean.sh
-

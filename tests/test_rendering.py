@@ -1,6 +1,7 @@
 import re
 import sys
 import unittest
+from copy import deepcopy
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -64,8 +65,44 @@ class RenderingTests(unittest.TestCase):
         self.assertIn("QCriterion\n{", rendered)
         self.assertIn("type Q;", rendered)
         self.assertIn("field U;", rendered)
-        self.assertIn("executeControl writeTime;", rendered)
+        self.assertIn("executeControl timeStep;", rendered)
         self.assertIn("writeControl writeTime;", rendered)
+
+    def test_runtime_images_are_rendered_on_the_hub_height_plane(self):
+        cfg = deepcopy(self.cfg)
+        cfg["visualization"]["enabled"] = True
+        rendered = render_functions(cfg)
+        self.assertIn("type vorticity;", rendered)
+        self.assertIn("mode staticCoeff;", rendered)
+        self.assertIn("result Cp;", rendered)
+        self.assertIn("point (0 0 12.192);", rendered)
+        self.assertIn("normal (0 0 1);", rendered)
+        self.assertIn("store true;", rendered)
+        self.assertEqual(rendered.count("type runTimePostProcessing;"), 22)
+        for name in ("velocity", "vorticity", "pressure_coefficient", "q_criterion"):
+            self.assertIn(f"name {name};", rendered)
+            block = rendered.split(f"render_{name}\n{{", 1)[1].split("\n}\n", 1)[0]
+            self.assertIn("parallel false;", block)
+            self.assertIn("text\n    {", block)
+            self.assertIn(
+                f"writeControl {self.cfg['visualization']['write_control']};",
+                block,
+            )
+            self.assertIn("vertical no;", block)
+            self.assertIn("size (0.285 0.055);", block)
+            self.assertIn("smooth true;", block)
+
+        self.assertIn("width 3840;", rendered)
+        self.assertIn("height 1440;", rendered)
+        self.assertIn("background2 (0.075 0.095 0.14);", rendered)
+        self.assertIn("NREL Phase VI  |  horizontal wake  hub", rendered)
+        self.assertIn("zoom 1.35;", rendered)
+        self.assertIn("horizontalPlanes.hubMinus025D", rendered)
+        self.assertIn("horizontalPlanes.hubPlus025D", rendered)
+        for distance in (1, 2, 4, 6, 8):
+            self.assertIn(f"wakeCrossSections.wake{distance}D", rendered)
+            self.assertIn(f"name wake_{distance}D_velocity;", rendered)
+            self.assertIn(f"name wake_{distance}D_vorticity;", rendered)
 
     def test_iddes_fields_and_orthogonal_numerics(self):
         turbulence = (ROOT / "case/constant/turbulenceProperties").read_text()
