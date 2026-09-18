@@ -15,8 +15,13 @@ if [[ -z "$cells" ]]; then
     echo "ERROR: could not read cell count from $log" >&2
     exit 3
 fi
-if (( cells < 6600000 || cells > 6800000 )); then
-    echo "ERROR: $cells cells is outside the 6.6M--6.8M acceptance band." >&2
+read -r min_cells max_cells < <(
+    python3 -c \
+        'import sys, yaml; print(*yaml.safe_load(open(sys.argv[1]))["mesh"]["target_cells"])' \
+        "$root/config/case.yaml"
+)
+if (( cells < min_cells || cells > max_cells )); then
+    echo "ERROR: $cells cells is outside the $min_cells--$max_cells acceptance band." >&2
     exit 3
 fi
 hexes="$(awk '/hexahedra:/ {print $2; exit}' "$log")"
@@ -35,4 +40,3 @@ awk -v value="$max_non_ortho" 'BEGIN { exit !(value <= 1e-10) }' || {
     exit 3
 }
 echo "Mesh accepted: $cells orthogonal hexahedral cells."
-
