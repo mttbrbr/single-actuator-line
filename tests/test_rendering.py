@@ -45,7 +45,7 @@ class RenderingTests(unittest.TestCase):
         smoke = render_block_mesh(self.cfg, "smoke")
         self.assertEqual(production.count("    hex ("), 18)
         self.assertEqual(smoke.count("    hex ("), 18)
-        self.assertIn("(50 36 64)", production)
+        self.assertIn("(75 54 96)", production)
         self.assertIn("(10 8 16)", smoke)
         self.assertNotIn("snappy", production.lower())
 

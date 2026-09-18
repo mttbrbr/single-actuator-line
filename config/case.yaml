@@ -25,17 +25,17 @@ domain_D:
 mesh:
   x:
     breaks_D: [-5.0, -0.5, 8.0, 15.0]
-    cells: [50, 272, 60]
+    cells: [75, 408, 90]
     grading: [0.160029, 1.0, 9.252929]
   y:
     breaks_D: [-4.0, -1.5, 1.5, 4.0]
-    cells: [36, 96, 36]
+    cells: [54, 144, 54]
     grading: [0.241240, 1.0, 4.145249]
   z:
     breaks_D: [0.0, 2.0, 5.0]
-    cells: [64, 40]
+    cells: [96, 60]
     grading: [1.0, 4.691804]
-  target_cells: [6600000, 6800000]
+  target_cells: [22400000, 22700000]
 
 abl:
   hub_velocity: 7.0

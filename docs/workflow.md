@@ -7,7 +7,7 @@
    python3 -m unittest discover -s tests -v.
 4. Run scripts/mesh.sh. Acceptance requires:
    - Mesh OK;
-   - 6.6–6.8 million cells;
+   - 22.4–22.7 million cells;
    - all cells hexahedral;
    - maximum non-orthogonality at numerical zero.
 5. Generate the Mann box with python3 tools/generate_mann_inflow.py.

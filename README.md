@@ -45,8 +45,8 @@ the actuator-line implementation.
 | Resolved inlet turbulence | Mann model, 10% longitudinal TI |
 | CFD solver | `pimpleFoam` |
 | Turbulence model | `kOmegaSSTIDDES` |
-| Production mesh | 6,674,304 hexahedral cells |
-| Rotor/wake core resolution | `D/32` |
+| Production mesh | 22,525,776 hexahedral cells |
+| Rotor/wake core resolution | `D/48` |
 | Simulated time | 57.5 s |
 | Statistics window | 28.75–57.5 s |
 | Parallel decomposition | 12 ranks |

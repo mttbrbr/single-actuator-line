@@ -23,12 +23,12 @@ and polar input.
 The domain is [-5D, 15D] x [-4D, 4D] x [0, 5D]. blockMesh creates a conformal
 3-by-3-by-2 arrangement of 18 Cartesian blocks. The central rotor and wake
 region extends from -0.5D to 8D, -1.5D to 1.5D, and from the ground to 2D; its
-spacing is uniform at D/32 = 0.3143 m. Geometric grading in the outer blocks
+spacing is uniform at D/48 = 0.2095 m. Geometric grading in the outer blocks
 stays below approximately 4.2% per cell.
 
-The production mesh has 6,674,304 cells. Every cell must be a hexahedron and
-maximum non-orthogonality must be numerical zero. topoSet only creates the T1
-source selection and does not modify the mesh.
+The refined production mesh has 22,525,776 cells. Every cell must be a
+hexahedron and maximum non-orthogonality must be numerical zero. topoSet only
+creates the T1 source selection and does not modify the mesh.
 
 ## IDDES and numerics
 

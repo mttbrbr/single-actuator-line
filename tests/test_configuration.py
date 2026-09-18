@@ -48,13 +48,19 @@ class ConfigurationTests(unittest.TestCase):
     def test_structured_mesh_cell_count_and_core_resolution(self):
         mesh = self.cfg["mesh"]
         totals = [sum(mesh[axis]["cells"]) for axis in ("x", "y", "z")]
-        self.assertEqual(math.prod(totals), 6_674_304)
-        core_dx_D = (mesh["x"]["breaks_D"][2] - mesh["x"]["breaks_D"][1]) / mesh["x"]["cells"][1]
-        core_dy_D = (mesh["y"]["breaks_D"][2] - mesh["y"]["breaks_D"][1]) / mesh["y"]["cells"][1]
-        core_dz_D = (mesh["z"]["breaks_D"][1] - mesh["z"]["breaks_D"][0]) / mesh["z"]["cells"][0]
-        self.assertAlmostEqual(core_dx_D, 1 / 32)
-        self.assertAlmostEqual(core_dy_D, 1 / 32)
-        self.assertAlmostEqual(core_dz_D, 1 / 32)
+        self.assertEqual(math.prod(totals), 22_525_776)
+        core_dx_D = (
+            mesh["x"]["breaks_D"][2] - mesh["x"]["breaks_D"][1]
+        ) / mesh["x"]["cells"][1]
+        core_dy_D = (
+            mesh["y"]["breaks_D"][2] - mesh["y"]["breaks_D"][1]
+        ) / mesh["y"]["cells"][1]
+        core_dz_D = (
+            mesh["z"]["breaks_D"][1] - mesh["z"]["breaks_D"][0]
+        ) / mesh["z"]["cells"][0]
+        self.assertAlmostEqual(core_dx_D, 1 / 48)
+        self.assertAlmostEqual(core_dy_D, 1 / 48)
+        self.assertAlmostEqual(core_dz_D, 1 / 48)
 
     def test_mann_grid_covers_requested_duration(self):
         spec = grid_spec(self.cfg)
