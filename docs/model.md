@@ -23,10 +23,12 @@ and polar input.
 The domain is [-5D, 15D] x [-4D, 4D] x [0, 5D]. blockMesh creates a conformal
 3-by-3-by-2 arrangement of 18 Cartesian blocks. The central rotor and wake
 region extends from -0.5D to 8D, -1.5D to 1.5D, and from the ground to 2D; its
-spacing is uniform at D/48 = 0.2095 m. Geometric grading in the outer blocks
+spacing is uniform at D/48 = 0.2095 m with the current YAML setting. Geometric grading in the outer blocks
 stays below approximately 4.2% per cell.
 
-The refined production mesh has 22,525,776 cells. Every cell must be a
+The current production mesh has 22,525,776 cells. Change only
+`mesh.cells_per_D` in `config/case.yaml` for a new run; 32 gives 6,674,304
+cells and the validator caps the total at 25 million. Every cell must be a
 hexahedron and maximum non-orthogonality must be numerical zero. topoSet only
 creates the T1 source selection and does not modify the mesh.
 
@@ -39,7 +41,7 @@ and resolves LES content where the mesh permits it.
 Velocity convection is centred. The transported k and omega equations use
 bounded convection. Gradients are linear and Laplacian/snGrad schemes are
 orthogonal. Since the mesh is Cartesian, nNonOrthogonalCorrectors is zero. The
-timestep is limited to 0.005 s and the Courant number to 0.7.
+timestep is limited to 0.035 s and the Courant number to 1.0.
 
 ## Neutral ABL and boundary conditions
 
@@ -50,8 +52,8 @@ The inlet mean is:
 with z0 = 0.03 m, kappa = 0.41 and u* = 0.4775537 m/s, giving U(H) = 7 m/s.
 Hipersim generates resolved Mann fluctuations with Gamma = 3.9, L = 0.7D,
 fixed seed and 10% longitudinal TI. The transverse Mann grid uses D/16 spacing
-(128 by 80 points across the inlet), so the D/48 wake-core mesh has three CFD
-cells per imposed inlet spacing. This adds smaller resolved structures without
+(128 by 80 points across the inlet), so the D/48 wake-core mesh has three Mann
+samples per CFD cell across the inlet. This adds smaller resolved structures without
 changing the prescribed turbulence intensity.
 
 At the production inlet, U uses timeVaryingMappedFixedValue; k and omega use
