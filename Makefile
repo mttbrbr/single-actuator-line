@@ -1,10 +1,10 @@
-.PHONY: generate test check-env mesh smoke mann resume clean
+.PHONY: generate test check-env mesh smoke mann run resume postprocess
 
 generate:
 	python3 tools/generate_case.py
 
 test:
-	python3 -m unittest discover -s tests -v
+	$(if $(wildcard .venv/bin/python),.venv/bin/python,python3) -m unittest discover -s tests -v
 	python3 tools/generate_case.py --check
 	python3 tools/generate_mann_inflow.py --dry-run
 
@@ -20,8 +20,11 @@ smoke:
 mann:
 	python3 tools/generate_mann_inflow.py
 
-resume:
-	./scripts/resume_production.sh
+run:
+	./scripts/run_production.sh
 
-clean:
-	./scripts/clean.sh
+resume:
+	./scripts/run_production.sh --resume
+
+postprocess:
+	$(if $(wildcard .venv/bin/python),.venv/bin/python,python3) scripts/postprocess.py all

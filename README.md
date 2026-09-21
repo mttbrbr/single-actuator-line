@@ -45,8 +45,8 @@ the actuator-line implementation.
 | Resolved inlet turbulence | Mann model, 10% longitudinal TI, `D/16` transverse sampling |
 | CFD solver | `pimpleFoam` |
 | Turbulence model | `kOmegaSSTIDDES` |
-| Production mesh | 22,525,776 hexahedral cells |
-| Rotor/wake core resolution | `D/48` |
+| Current mesh (`mesh.cells_per_D: 48`) | 22,525,776 hexahedral cells |
+| Rotor/wake core resolution | `D/48`, configurable in YAML |
 | Simulated time | 57.5 s |
 | Statistics window | 28.75–57.5 s |
 | Parallel decomposition | 12 ranks |
@@ -70,11 +70,19 @@ Generated OpenFOAM dictionaries are derived from `config/case.yaml`; edit the
 YAML configuration and regenerate them instead of maintaining generated files
 by hand.
 
+To choose a different mesh, edit just `mesh.cells_per_D` in
+`config/case.yaml`, then run `make generate && make mesh` **before starting a
+new simulation**. For example, 32 gives 6,674,304 cells, 40 gives
+13,022,100, and the current 48 gives 22,525,776. The validator rejects
+resolutions above `mesh.max_cells: 25000000`. Never change this setting in the
+middle of a run: the existing mesh and checkpoints belong to the old value.
+
 ## Requirements
 
 - Linux with OpenFOAM.com v2412 sourced in the current shell;
 - a C++ build of `libturbinesFoam.so` compatible with that OpenFOAM build;
 - Python 3 with the packages listed in `requirements.txt`;
+- FFmpeg (`ffmpeg` and `ffprobe`) for post-processing videos;
 - MPI with at least 4 ranks for the smoke test and 12 for production.
 
 To build the upstream actuator-line library in the standard OpenFOAM user
@@ -114,11 +122,12 @@ The smoke profile uses a coarse mesh, uniform inflow and four MPI ranks. It is
 intended to catch setup or runtime errors, not to produce physical results.
 
 ```bash
-./scripts/run_smoke.sh
+make smoke
 ```
 
-Regenerate the production profile before inspecting or running the production
-case, because the smoke command rewrites generated dictionaries.
+The smoke run is created under `/tmp/single-actuator-line-smoke.*` and never
+rewrites production dictionaries or checkpoints. Its temporary path is printed
+for inspecting logs.
 
 ## Production run
 
@@ -133,7 +142,7 @@ Generate the Mann inlet and start the 12-rank calculation:
 
 ```bash
 python3 tools/generate_mann_inflow.py
-./scripts/run_production.sh
+make run
 ```
 
 If an existing production calculation is interrupted, resume it from the
@@ -149,24 +158,30 @@ See [`docs/workflow.md`](docs/workflow.md) for the complete acceptance checks.
 
 During production, function objects write vorticity, pressure coefficient, Q,
 the native IDDES `LESRegion` diagnostic and wake-plane samples. In-solver VTK
-rendering is disabled by default because it requires an authorised X display
-and can abort an otherwise healthy MPI calculation. The optional render setup
-is retained under `visualization` in `config/case.yaml` for explicit
-post-processing use.
+rendering is disabled because it can abort an otherwise healthy MPI run. The
+production configuration now sets `purgeWrite 0`, retaining every saved
+checkpoint for later analysis; plan for hundreds of GB of disk usage.
 
-Create a 2x2 H.264 video plus one video for each individual field:
+After the run, with OpenFOAM v2412 sourced and the Python environment active,
+use one headless command for all checkpoint videos and turbulence diagnostics:
 
 ```bash
-python3 scripts/make_postprocessing_video.py -o videos
+python3 scripts/postprocess.py all
 ```
 
-The script discovers every rendered perspective. Combined videos are written
-below `videos/main/`, while individual views are grouped below field folders
-such as `videos/velocity/` and `videos/vorticity/`. It uses only times common
-to the fields in each view and ignores stale images with a different
-resolution. Use `--fps`, `--start`, `--end` and `--width` to control the
-animation. The `--combined-only` and `--single-only` flags limit the outputs;
-`--dry-run` reports the selected frames without requiring `ffmpeg`.
+This samples only the local decomposed case, produces individual MP4s under
+`videos/<field>/` and combined videos under `videos/main/`, and writes resolved
+TKE/IDDES maps and `les-diagnostics-timeseries.csv` under `artifacts/`. It uses
+every complete checkpoint that still
+exists on all ranks and reports the exact time range. The separate actions
+`status`, `sample`, `videos`, `diagnostics`, and `verify` support inspection or
+resuming an interrupted post-processing job. The workflow verifies that every
+video contains one frame per retained checkpoint. It never reads images from
+another case.
+The display raster interpolates between sampled plane points; this affects only
+the video image, not the CFD fields or quantitative LES diagnostics.
+The already-completed run has 64 retained checkpoints from 26 to
+57.5 s; earlier fields were purged and cannot be reconstructed.
 
 ## Useful commands
 
@@ -177,13 +192,15 @@ make check-env   # validate OpenFOAM and turbinesFoam
 make mesh        # build and validate the production mesh
 make smoke       # execute the coarse uniform-inflow smoke test
 make mann        # generate Mann boundaryData
+make run         # start a new run; refuses to overwrite existing checkpoints
 make resume      # resume an existing 12-rank decomposed run
-make clean       # remove generated simulation data
+make postprocess # videos and turbulence diagnostics from retained checkpoints
 ```
 
-`make clean` removes generated mesh and time directories, processor data,
-logs, post-processing results and recognised Mann boundary data. The reusable
-templates `case/0.uniform` and `case/0.mann` are preserved.
+Deleting generated CFD data is deliberately not a Makefile target. If a run
+must be removed, `./scripts/clean.sh --confirm-delete-generated-data` requires
+an explicit opt-in and preserves the reusable `case/0.uniform` and
+`case/0.mann` templates.
 
 ## Data and reproducibility
 

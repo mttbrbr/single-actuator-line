@@ -7,7 +7,8 @@
    python3 -m unittest discover -s tests -v.
 4. Run scripts/mesh.sh. Acceptance requires:
    - Mesh OK;
-   - 22.4–22.7 million cells;
+   - exactly the number of cells derived from `mesh.cells_per_D` in YAML
+     (22,525,776 at the current value 48; maximum 25 million);
    - all cells hexahedral;
    - maximum non-orthogonality at numerical zero.
 5. Generate the Mann box with python3 tools/generate_mann_inflow.py.
@@ -16,14 +17,20 @@
    boundaryData/manifest.json.
 6. Run scripts/check_environment.sh, prepare the Mann initial directory and
    execute pimpleFoam -dry-run before a production launch.
-7. Run scripts/run_production.sh for the 57.5 s, 12-rank calculation.
+7. Run `make run` for a new 57.5 s, 12-rank calculation, or `make resume`
+   for an existing decomposed run. `make run` refuses to overwrite checkpoints.
 8. Post-process the T1 performance CSV and wake samples over 28.75–57.5 s.
 
-In-solver rendering remains disabled in `config/case.yaml`: VTK/X11 rendering
-can terminate the MPI solver when no authorised display is available. Keep CFD
-and image production as separate steps. The retained visualization settings
-may be enabled deliberately for post-processing in a suitable VTK environment.
+The case no longer contains the in-solver VTK/X11 renderer, which could
+terminate MPI when no authorised display was available. Keep CFD and image
+production separate. Run `python3 scripts/postprocess.py all` after
+the calculation for headless videos and resolved-TKE/IDDES diagnostics. This
+uses all complete retained checkpoints, and `purgeWrite 0` prevents future
+production runs from silently discarding early frames. Monitor disk usage.
+The video renderer uses the former full-frame colour-map style at 3840-pixel
+width, without screen/display access.
 
-scripts/clean.sh removes generated mesh, times, logs, post-processing and
-recognised Mann boundary data. Mann data with an unknown marker are refused
-rather than deleted.
+`scripts/clean.sh --confirm-delete-generated-data` removes generated mesh,
+times, logs, post-processing and recognised Mann boundary data only after
+explicit opt-in. Mann data with an unknown marker are refused rather than
+deleted.
