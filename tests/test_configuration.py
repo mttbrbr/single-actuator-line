@@ -1,4 +1,5 @@
 import math
+import copy
 import sys
 import unittest
 from pathlib import Path
@@ -8,6 +9,9 @@ sys.path.insert(0, str(ROOT / "tools"))
 
 from case_config import (  # noqa: E402
     load_config,
+    mesh_cells,
+    mesh_cell_count,
+    validate_config,
     mean_velocity,
     read_blade,
     tip_speed_ratio,
@@ -47,20 +51,32 @@ class ConfigurationTests(unittest.TestCase):
 
     def test_structured_mesh_cell_count_and_core_resolution(self):
         mesh = self.cfg["mesh"]
-        totals = [sum(mesh[axis]["cells"]) for axis in ("x", "y", "z")]
+        cells = mesh_cells(self.cfg)
+        totals = [sum(cells[axis]) for axis in ("x", "y", "z")]
         self.assertEqual(math.prod(totals), 22_525_776)
         core_dx_D = (
             mesh["x"]["breaks_D"][2] - mesh["x"]["breaks_D"][1]
-        ) / mesh["x"]["cells"][1]
+        ) / cells["x"][1]
         core_dy_D = (
             mesh["y"]["breaks_D"][2] - mesh["y"]["breaks_D"][1]
-        ) / mesh["y"]["cells"][1]
+        ) / cells["y"][1]
         core_dz_D = (
             mesh["z"]["breaks_D"][1] - mesh["z"]["breaks_D"][0]
-        ) / mesh["z"]["cells"][0]
+        ) / cells["z"][0]
         self.assertAlmostEqual(core_dx_D, 1 / 48)
         self.assertAlmostEqual(core_dy_D, 1 / 48)
         self.assertAlmostEqual(core_dz_D, 1 / 48)
+
+    def test_one_resolution_setting_controls_mesh_and_budget(self):
+        coarse = copy.deepcopy(self.cfg)
+        coarse["mesh"]["cells_per_D"] = 32
+        validate_config(coarse)
+        self.assertEqual(mesh_cell_count(coarse), 6_674_304)
+        self.assertEqual(mesh_cells(coarse)["x"], [50, 272, 60])
+        too_fine = copy.deepcopy(self.cfg)
+        too_fine["mesh"]["cells_per_D"] = 50
+        with self.assertRaisesRegex(ValueError, "max_cells"):
+            validate_config(too_fine)
 
     def test_mann_grid_covers_requested_duration(self):
         spec = grid_spec(self.cfg)

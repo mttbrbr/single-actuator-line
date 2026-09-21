@@ -15,13 +15,9 @@ if [[ -z "$cells" ]]; then
     echo "ERROR: could not read cell count from $log" >&2
     exit 3
 fi
-read -r min_cells max_cells < <(
-    python3 -c \
-        'import sys, yaml; print(*yaml.safe_load(open(sys.argv[1]))["mesh"]["target_cells"])' \
-        "$root/config/case.yaml"
-)
-if (( cells < min_cells || cells > max_cells )); then
-    echo "ERROR: $cells cells is outside the $min_cells--$max_cells acceptance band." >&2
+expected_cells="$(PYTHONPATH="$root/tools" python3 -c 'from case_config import load_config, mesh_cell_count; print(mesh_cell_count(load_config()))')"
+if (( cells != expected_cells )); then
+    echo "ERROR: $cells cells, but YAML resolution requires $expected_cells. Existing mesh and configuration differ." >&2
     exit 3
 fi
 hexes="$(awk '/hexahedra:/ {print $2; exit}' "$log")"

@@ -23,6 +23,11 @@ domain_D:
   z: [0.0, 5.0]
 
 mesh:
+  # Change only this value to choose the core resolution. 48 = current 22.5M
+  # case; 32 = 6.67M cells. 49 is under, 50 exceeds the 25M-cell budget.
+  cells_per_D: 48
+  reference_cells_per_D: 48
+  max_cells: 25000000
   x:
     breaks_D: [-5.0, -0.5, 8.0, 15.0]
     cells: [75, 408, 90]
@@ -35,7 +40,6 @@ mesh:
     breaks_D: [0.0, 2.0, 5.0]
     cells: [96, 60]
     grading: [1.0, 4.691804]
-  target_cells: [22400000, 22700000]
 
 abl:
   hub_velocity: 7.0
@@ -64,49 +68,10 @@ run:
   max_delta_t: 0.035
   max_courant: 1.0
   write_interval: 0.5
-  purge_write: 64
+  # Keep every checkpoint for reproducible full-run videos and diagnostics.
+  # This can require hundreds of GB; monitor free disk space.
+  purge_write: 0
   n_processors: 12
-
-visualization:
-  # Render saved fields after the CFD run.  In-solver VTK/X11 rendering makes
-  # the MPI calculation depend on a live desktop session and can abort it.
-  enabled: false
-  write_control: writeTime
-  write_interval: 1
-  # Cinematic aspect ratio matched to the physical extent below.  Keeping the
-  # two ratios equal prevents VTK from letterboxing the sampled plane.
-  image_size: [3840, 1440]
-  horizontal_offsets_D: [-0.25, 0.0, 0.25]
-  view_D:
-    x: [-0.5, 7.5]
-    y: [-1.5, 1.5]
-  cross_sections_D: [1, 2, 4, 6, 8]
-  cross_image_size: [3840, 1920]
-  cross_view_D:
-    y: [-1.5, 1.5]
-    z_offset: [-0.75, 0.75]
-  cross_fields: [velocity, vorticity]
-  fields:
-    velocity:
-      field: U
-      range: [4.0, 8.5]
-      title: "|U| [m/s]"
-      colour_map: coolToWarm
-    vorticity:
-      field: vorticity
-      range: [0.0, 2.0]
-      title: "|vorticity| [1/s]"
-      colour_map: fire
-    pressure_coefficient:
-      field: Cp
-      range: [-0.4, 0.8]
-      title: "Cp [-]"
-      colour_map: coolToWarm
-    q_criterion:
-      field: Q
-      range: [0.0, 0.5]
-      title: "Q [1/s2]"
-      colour_map: coolToWarm
 
 smoke:
   end_time: 0.25

@@ -17,6 +17,8 @@ from case_config import (
     foam_vector,
     friction_velocity,
     load_config,
+    mesh_cells,
+    mesh_cell_count,
     read_blade,
     tip_speed_ratio,
     turbine_positions,
@@ -31,17 +33,7 @@ def render_block_mesh(cfg: dict, profile: str) -> str:
         axis: [float(value) * diameter for value in cfg["mesh"][axis]["breaks_D"]]
         for axis in ("x", "y", "z")
     }
-    cells = {
-        axis: [
-            int(value)
-            for value in (
-                cfg["mesh"][axis]["cells"]
-                if profile == "production"
-                else cfg["smoke"]["cells"][axis]
-            )
-        ]
-        for axis in ("x", "y", "z")
-    }
+    cells = mesh_cells(cfg, profile)
     grading = {
         axis: [float(value) for value in cfg["mesh"][axis]["grading"]]
         for axis in ("x", "y", "z")
@@ -312,7 +304,6 @@ def render_functions(cfg: dict) -> str:
         for name, point in planes
     )
     start = float(cfg["run"]["statistics_start"])
-    visualization = render_visualization_functions(cfg)
     return f"""QCriterion
 {{
     type Q;
@@ -398,259 +389,7 @@ wakePlanes
 {plane_lines}
     );
 }}
-{visualization}
 """
-
-
-def render_visualization_functions(cfg: dict) -> str:
-    settings = cfg.get("visualization", {})
-    if not settings.get("enabled", False):
-        return ""
-
-    diameter = float(cfg["turbine"]["diameter"])
-    hub = float(cfg["turbine"]["hub_height"])
-    turbine = turbine_positions(cfg)[0]
-    write_control = settings["write_control"]
-    write_interval = int(settings["write_interval"])
-    fields = settings["fields"]
-
-    def renderer(
-        image_name: str,
-        function_object: str,
-        field_settings: dict,
-        image_size: tuple[int, int],
-        focal: tuple[float, float, float],
-        position: tuple[float, float, float],
-        up: tuple[float, float, float],
-        clip_min: tuple[float, float, float],
-        clip_max: tuple[float, float, float],
-        context: str,
-        zoom: float,
-    ) -> str:
-        value_range = foam_vector(tuple(float(v) for v in field_settings["range"]))
-        width, height = image_size
-        return f"""render_{image_name}
-{{
-    type runTimePostProcessing;
-    libs (\"librunTimePostProcessing.so\");
-    parallel false;
-    executeControl none;
-    writeControl {write_control};
-    writeInterval {write_interval};
-
-    output
-    {{
-        name {image_name};
-        width {width};
-        height {height};
-    }}
-
-    camera
-    {{
-        parallelProjection yes;
-        zoom {zoom:.8g};
-        clipBox {foam_vector(clip_min)}{foam_vector(clip_max)};
-        focalPoint {foam_vector(focal)};
-        up {foam_vector(up)};
-        position {foam_vector(position)};
-    }}
-
-    colours
-    {{
-        background (0.025 0.035 0.055);
-        background2 (0.075 0.095 0.14);
-        text (0.94 0.96 1);
-        edge (0.25 0.3 0.4);
-        surface (0.5 0.5 0.5);
-    }}
-
-    text
-    {{
-        context
-        {{
-            string "{context}";
-            position (0.025 0.945);
-            halign left;
-            size 17;
-            opacity 0.9;
-            bold yes;
-            shadow yes;
-            visible yes;
-        }}
-    }}
-
-    surfaces
-    {{
-        hubHeightPlane
-        {{
-            type functionObjectSurface;
-            functionObject {function_object};
-            liveObject true;
-            representation surface;
-            smooth true;
-            visible yes;
-            featureEdges none;
-            colourBy field;
-            field {field_settings['field']};
-            colourMap {field_settings['colour_map']};
-            range {value_range};
-            opacity 1;
-            scalarBar
-            {{
-                visible yes;
-                position (0.68 0.865);
-                size (0.285 0.055);
-                vertical no;
-                fontSize 14;
-                titleSize 17;
-                title \"{field_settings['title']}\";
-                labelFormat \"%.2g\";
-                numberOfLabels 5;
-                bold yes;
-                shadow yes;
-            }}
-        }}
-    }}
-}}
-"""
-
-    horizontal_offsets = [float(value) for value in settings["horizontal_offsets_D"]]
-    x_limits = [float(value) * diameter for value in settings["view_D"]["x"]]
-    y_limits = [float(value) * diameter for value in settings["view_D"]["y"]]
-    horizontal_surfaces = []
-    renderers = []
-    for offset in horizontal_offsets:
-        plane_z = hub + offset * diameter
-        if offset == 0:
-            plane_name = "hubHeight"
-            image_prefix = ""
-            label = "hub"
-        else:
-            direction = "plus" if offset > 0 else "minus"
-            magnitude = f"{abs(offset):.2f}".replace(".", "")
-            plane_name = f"hub{direction.title()}{magnitude}D"
-            image_prefix = f"horizontal_{direction}_{magnitude}D_"
-            label = f"hub {offset:+.2f}D"
-        horizontal_surfaces.append(
-            f"""        {plane_name}
-        {{
-            type cuttingPlane;
-            planeType pointAndNormal;
-            pointAndNormalDict
-            {{
-                point {foam_vector((float(turbine['x']), float(turbine['y']), plane_z))};
-                normal (0 0 1);
-            }}
-            interpolate true;
-        }}"""
-        )
-        focal = (
-            0.5 * (x_limits[0] + x_limits[1]) + 0.5 * diameter,
-            0.5 * (y_limits[0] + y_limits[1]),
-            plane_z,
-        )
-        position = (focal[0], focal[1], plane_z + 20.0 * diameter)
-        clip_min = (x_limits[0], y_limits[0], plane_z - 0.01 * diameter)
-        clip_max = (x_limits[1], y_limits[1], plane_z + 0.01 * diameter)
-        for field_name, field_settings in fields.items():
-            renderers.append(
-                renderer(
-                    f"{image_prefix}{field_name}",
-                    f"horizontalPlanes.{plane_name}",
-                    field_settings,
-                    tuple(int(value) for value in settings["image_size"]),
-                    focal,
-                    position,
-                    (0.0, 1.0, 0.0),
-                    clip_min,
-                    clip_max,
-                    f"NREL Phase VI  |  horizontal wake  {label}  |  z/D = {plane_z / diameter:.2f}",
-                    1.35,
-                )
-            )
-
-    cross_y = [float(value) * diameter for value in settings["cross_view_D"]["y"]]
-    cross_z = [hub + float(value) * diameter for value in settings["cross_view_D"]["z_offset"]]
-    cross_sections = [float(value) for value in settings["cross_sections_D"]]
-    cross_surfaces = []
-    for downstream in cross_sections:
-        plane_x = float(turbine["x"]) + downstream * diameter
-        distance_name = f"{downstream:g}D".replace(".", "p")
-        plane_name = f"wake{distance_name}"
-        cross_surfaces.append(
-            f"""        {plane_name}
-        {{
-            type cuttingPlane;
-            planeType pointAndNormal;
-            pointAndNormalDict
-            {{
-                point {foam_vector((plane_x, float(turbine['y']), hub))};
-                normal (1 0 0);
-            }}
-            interpolate true;
-        }}"""
-        )
-        focal = (plane_x, 0.5 * (cross_y[0] + cross_y[1]), 0.5 * (cross_z[0] + cross_z[1]))
-        position = (plane_x - 20.0 * diameter, focal[1], focal[2])
-        clip_min = (plane_x - 0.01 * diameter, cross_y[0], cross_z[0])
-        clip_max = (plane_x + 0.01 * diameter, cross_y[1], cross_z[1])
-        for field_name in settings["cross_fields"]:
-            renderers.append(
-                renderer(
-                    f"wake_{distance_name}_{field_name}",
-                    f"wakeCrossSections.{plane_name}",
-                    fields[field_name],
-                    tuple(int(value) for value in settings["cross_image_size"]),
-                    focal,
-                    position,
-                    (0.0, 0.0, 1.0),
-                    clip_min,
-                    clip_max,
-                    f"NREL Phase VI  |  rotor-parallel wake section  x/D = {downstream:g}",
-                    1.05,
-                )
-            )
-
-    horizontal_fields = " ".join(str(item["field"]) for item in fields.values())
-    cross_fields = " ".join(str(fields[name]["field"]) for name in settings["cross_fields"])
-    return f"""
-horizontalPlanes
-{{
-    type surfaces;
-    libs (\"libsampling.so\");
-    executeControl timeStep;
-    executeInterval 1;
-    writeControl none;
-    surfaceFormat none;
-    store true;
-    sampleOnExecute true;
-    interpolationScheme cellPoint;
-    fields ({horizontal_fields});
-    surfaces
-    {{
-{chr(10).join(horizontal_surfaces)}
-    }}
-}}
-
-wakeCrossSections
-{{
-    type surfaces;
-    libs ("libsampling.so");
-    executeControl timeStep;
-    executeInterval 1;
-    writeControl none;
-    surfaceFormat none;
-    store true;
-    sampleOnExecute true;
-    interpolationScheme cellPoint;
-    fields ({cross_fields});
-    surfaces
-    {{
-{chr(10).join(cross_surfaces)}
-    }}
-}}
-
-{"".join(renderers)}"""
 
 
 def render_control_dict(cfg: dict, profile: str) -> str:
@@ -708,14 +447,7 @@ def render_metadata(cfg: dict, profile: str) -> str:
         {
             "profile": profile,
             "turbines": turbine_positions(cfg),
-            "mesh_cells": math.prod(
-                sum(
-                    cfg["mesh"][axis]["cells"]
-                    if profile == "production"
-                    else cfg["smoke"]["cells"][axis]
-                )
-                for axis in ("x", "y", "z")
-            ),
+            "mesh_cells": mesh_cell_count(cfg, profile),
             "tip_speed_ratio_computed": tip_speed_ratio(cfg),
             "friction_velocity": friction_velocity(cfg),
         },
