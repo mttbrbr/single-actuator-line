@@ -4,6 +4,12 @@ set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
 case_dir="$root/case"
 
+if [[ "${1:-}" != "--confirm-delete-generated-data" ]]; then
+    echo "Refusing to delete CFD results without explicit confirmation." >&2
+    echo "Run: ./scripts/clean.sh --confirm-delete-generated-data" >&2
+    exit 2
+fi
+
 find "$case_dir" -maxdepth 1 -type d -name 'processor*' -exec rm -rf {} +
 find "$case_dir" -maxdepth 1 -type d -regex '.*/[0-9]+\(\.[0-9]+\)?' -exec rm -rf {} +
 rm -rf "$case_dir/constant/polyMesh" "$case_dir/postProcessing" "$case_dir/0"
@@ -18,4 +24,3 @@ if [[ -d "$boundary_data" ]]; then
 fi
 rm -f "$case_dir"/log.* "$case_dir"/*.foam "$case_dir/system/snappyHexMeshDict"
 echo "Removed generated mesh, times, logs, post-processing and Mann boundaryData."
-

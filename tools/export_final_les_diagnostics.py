@@ -4,18 +4,24 @@
 from __future__ import annotations
 
 import base64
+import csv
+import json
 import math
 import struct
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
+from case_config import load_config
+
 ROOT = Path(__file__).resolve().parents[1]
-TIME = "57.5"
-SOURCE = ROOT / "case/postProcessing/wakePlanes" / TIME
+BASE = ROOT / "case/postProcessing/wakePlanes"
+TIME = max((p.name for p in BASE.iterdir() if p.is_dir()), key=float) if BASE.is_dir() else ""
+SOURCE = BASE / TIME
 OUT = ROOT / "artifacts"
 
-D = 10.058
-HUB = 12.192
+CFG = load_config()
+D = float(CFG["turbine"]["diameter"])
+HUB = float(CFG["turbine"]["hub_height"])
 NX, NZ = 52, 34
 YMIN, YMAX = -1.5, 1.5
 ZMIN, ZMAX = -0.75, 0.75
@@ -133,8 +139,8 @@ def svg_document(kind: str, panels: list[tuple[str, list[float | None], dict[str
 <text class="axis" x="{plot_x+plot_w/2}" y="{plot_y+plot_h+43}" text-anchor="middle">y / D</text>
 <text class="tick" x="{plot_x-9}" y="{plot_y+5}" text-anchor="end">+0.75</text><text class="tick" x="{plot_x-9}" y="{plot_y+plot_h/2+5}" text-anchor="end">0</text><text class="tick" x="{plot_x-9}" y="{plot_y+plot_h+5}" text-anchor="end">−0.75</text>
 <text class="axis" transform="translate(15 {plot_y+plot_h/2}) rotate(-90)" text-anchor="middle">(z−H) / D</text></g>''')
-    footer = ("Statistiche temporali accumulate nella simulazione fino a t = 57.5 s; linea tratteggiata: diametro del rotore." if pope else
-              "Diagnostica istantanea del modello ibrido. La quota globale volumetrica LES a t = 57.5 s è 37.74%.")
+    footer = (f"Statistiche temporali accumulate fino a t = {TIME} s; linea tratteggiata: diametro del rotore." if pope else
+              "Diagnostica istantanea IDDES sui piani campionati; LESRegion non equivale alla quota TKE risolta.")
     parts.append(f'<text class="subtitle" x="40" y="900">{footer}</text></svg>')
     return "".join(parts)
 
@@ -150,8 +156,26 @@ def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     pope_panels = [(n, p, s) for n, p, _, s in results]
     region_panels = [(n, r, s) for n, _, r, s in results]
-    (OUT / "pope-resolution-t57.5.svg").write_text(svg_document("pope", pope_panels))
-    (OUT / "iddes-les-region-t57.5.svg").write_text(svg_document("region", region_panels))
+    (OUT / f"pope-resolution-t{TIME}.svg").write_text(svg_document("pope", pope_panels))
+    (OUT / f"iddes-les-region-t{TIME}.svg").write_text(svg_document("region", region_panels))
+    (OUT / f"les-diagnostics-t{TIME}.json").write_text(
+        json.dumps({"time": float(TIME), "planes": {n: s for n, _, _, s in results}}, indent=2)
+        + "\n"
+    )
+    history = []
+    for directory in sorted((p for p in BASE.iterdir() if p.is_dir()), key=lambda p: float(p.name)):
+        for name in PLANES:
+            path = directory / f"T1_{name}.vtp"
+            if not path.is_file():
+                continue
+            _, _, stats = binned(path)
+            history.append({"time": float(directory.name), "plane": name, **stats})
+    if history:
+        with (OUT / "les-diagnostics-timeseries.csv").open("w", newline="") as stream:
+            writer = csv.DictWriter(stream, fieldnames=list(history[0]))
+            writer.writeheader()
+            writer.writerows(history)
+        print(f"Serie temporale: {len(history)} campioni piano-tempo")
 
 
 if __name__ == "__main__":

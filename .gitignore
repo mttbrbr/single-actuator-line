@@ -8,6 +8,7 @@ case/constant/boundaryData/
 case/postProcessing/
 case/postProcessing-*/
 case/log.*
+case/wake_summary.*
 case/*.foam
 case/dynamicCode/
 
@@ -19,6 +20,7 @@ case/system/topoSetDict
 case/system/blockMeshDict
 case/system/controlDict
 case/system/decomposeParDict
+case/system/videoPostprocessDict
 
 # Mann boxes and Python artefacts
 inflow/
