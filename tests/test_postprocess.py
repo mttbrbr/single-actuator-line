@@ -21,6 +21,10 @@ class PostprocessTests(unittest.TestCase):
         self.assertNotIn("runTimePostProcessing", dictionary)
         self.assertEqual(set(postprocess.views_spec(postprocess.config())), set(postprocess.VIEWS))
 
+    def test_video_frames_use_original_full_width_layout(self):
+        self.assertEqual(postprocess.video_size("hub"), (3840, 1440))
+        self.assertEqual(postprocess.video_size("wake_2D"), (3840, 1920))
+
 
 if __name__ == "__main__":
     unittest.main()

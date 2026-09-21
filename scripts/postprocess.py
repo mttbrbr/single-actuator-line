@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+import csv
 import shutil
 import struct
 import subprocess
@@ -299,14 +300,40 @@ def verify_videos(checkpoints: list[Decimal]) -> None:
           f"t={checkpoints[0]}..{checkpoints[-1]} s")
 
 
+def images(checkpoints: list[Decimal], args: argparse.Namespace) -> None:
+    """Extract the verified 4K video frames, with a time index, as PNGs."""
+    ffmpeg = shutil.which("ffmpeg")
+    if ffmpeg is None:
+        raise RuntimeError("ffmpeg is required")
+    destination = ROOT / "images"
+    if args.dry_run:
+        print(f"Would export {len(checkpoints)} PNGs from each video to {destination}")
+        return
+    verify_videos(checkpoints)
+    destination.mkdir(parents=True, exist_ok=True)
+    with (destination / "checkpoint_times.csv").open("w", newline="") as stream:
+        writer = csv.writer(stream)
+        writer.writerow(("frame", "time_s"))
+        writer.writerows((i, str(t)) for i, t in enumerate(checkpoints))
+    for movie in sorted((ROOT / "videos").glob("*/*.mp4")):
+        target = destination / movie.parent.name / movie.stem
+        target.mkdir(parents=True, exist_ok=True)
+        print(f"Images: {movie.parent.name}/{movie.stem} -> {target}", flush=True)
+        subprocess.run([ffmpeg, "-hide_banner", "-loglevel", "error", "-y",
+                        "-i", str(movie), "-vsync", "0",
+                        str(target / "frame_%04d.png")], check=True)
+        if len(list(target.glob("frame_*.png"))) != len(checkpoints):
+            raise RuntimeError(f"Incomplete PNG export: {target}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=("status", "sample", "videos", "diagnostics", "verify", "all"))
+    parser.add_argument("action", choices=("status", "sample", "videos", "images", "diagnostics", "verify", "all"))
     parser.add_argument("--fps", type=float, default=12)
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
     checkpoints = checkpoint_times()
-    print(f"Refined case: {len(checkpoints)} complete checkpoints, {checkpoints[0]}..{checkpoints[-1]} s")
+    print(f"Case: {len(checkpoints)} complete checkpoints, {checkpoints[0]}..{checkpoints[-1]} s")
     if args.action == "status":
         print(f"Sampled video times: {len(times_in(POST))}")
         return
@@ -318,6 +345,8 @@ def main() -> None:
         diagnostics()
     if args.action in ("videos", "verify", "all") and not args.dry_run:
         verify_videos(checkpoints)
+    if args.action in ("images", "all"):
+        images(checkpoints, args)
 
 
 if __name__ == "__main__":

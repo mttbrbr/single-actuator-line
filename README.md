@@ -170,11 +170,12 @@ python3 scripts/postprocess.py all
 ```
 
 This samples only the local decomposed case, produces individual MP4s under
-`videos/<field>/` and combined videos under `videos/main/`, and writes resolved
+`videos/<field>/`, combined videos under `videos/main/`, and 4K PNG frames under
+`images/<field>/<view>/` (indexed by `images/checkpoint_times.csv`), and writes resolved
 TKE/IDDES maps and `les-diagnostics-timeseries.csv` under `artifacts/`. It uses
 every complete checkpoint that still
 exists on all ranks and reports the exact time range. The separate actions
-`status`, `sample`, `videos`, `diagnostics`, and `verify` support inspection or
+`status`, `sample`, `videos`, `images`, `diagnostics`, and `verify` support inspection or
 resuming an interrupted post-processing job. The workflow verifies that every
 video contains one frame per retained checkpoint. It never reads images from
 another case.
