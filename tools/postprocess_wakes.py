@@ -64,7 +64,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
     parser.add_argument("--case", type=Path, default=ROOT / "case")
-    parser.add_argument("--output", type=Path, default=ROOT / "case" / "wake_summary.csv")
+    parser.add_argument("--output", type=Path, default=ROOT / "postprocessing" / "artifacts" / "wake_summary.csv")
     args = parser.parse_args()
 
     cfg = load_config(args.config)
@@ -114,4 +114,3 @@ if __name__ == "__main__":
     except (FileNotFoundError, ValueError) as error:
         print(f"error: {error}", file=sys.stderr)
         raise SystemExit(2)
-

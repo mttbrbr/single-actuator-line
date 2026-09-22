@@ -19,6 +19,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 CASE = ROOT / "case"
 POST = CASE / "postProcessing" / "videoPlanes"
+OUTPUT = ROOT / "postprocessing"
 VIEWS = ("horizontal_minus_025D", "hub", "horizontal_plus_025D",
          "wake_1D", "wake_2D", "wake_4D", "wake_6D", "wake_8D")
 FIELDS = ("velocity", "vorticity", "pressure_coefficient", "q_criterion")
@@ -218,7 +219,7 @@ def video(args: argparse.Namespace, checkpoints: list[Decimal]) -> None:
     ffmpeg = shutil.which("ffmpeg")
     if ffmpeg is None:
         raise RuntimeError("ffmpeg is required")
-    output = ROOT / "videos"
+    output = OUTPUT / "videos"
     sampled = times_in(POST)
     available = [t for t in checkpoints if t in sampled]
     if available != checkpoints:
@@ -276,7 +277,7 @@ def diagnostics() -> None:
         subprocess.run([sys.executable, str(ROOT / "tools" / tool)], cwd=ROOT, check=True)
     converter = shutil.which("rsvg-convert")
     if converter:
-        for svg in (ROOT / "artifacts").glob("*t*.svg"):
+        for svg in (OUTPUT / "artifacts").glob("*t*.svg"):
             subprocess.run([converter, "-w", "1800", "-o", str(svg.with_suffix(".png")),
                             str(svg)], check=True)
 
@@ -286,7 +287,7 @@ def verify_videos(checkpoints: list[Decimal]) -> None:
     if ffprobe is None:
         raise RuntimeError("ffprobe is required to verify the videos")
     expected = sum(2 if view.startswith("wake_") else 4 for view in VIEWS) + len(VIEWS)
-    paths = sorted((ROOT / "videos").glob("*/*.mp4"))
+    paths = sorted((OUTPUT / "videos").glob("*/*.mp4"))
     if len(paths) != expected:
         raise RuntimeError(f"Expected {expected} videos, found {len(paths)}")
     for path in paths:
@@ -305,7 +306,7 @@ def images(checkpoints: list[Decimal], args: argparse.Namespace) -> None:
     ffmpeg = shutil.which("ffmpeg")
     if ffmpeg is None:
         raise RuntimeError("ffmpeg is required")
-    destination = ROOT / "images"
+    destination = OUTPUT / "images"
     if args.dry_run:
         print(f"Would export {len(checkpoints)} PNGs from each video to {destination}")
         return
@@ -315,7 +316,7 @@ def images(checkpoints: list[Decimal], args: argparse.Namespace) -> None:
         writer = csv.writer(stream)
         writer.writerow(("frame", "time_s"))
         writer.writerows((i, str(t)) for i, t in enumerate(checkpoints))
-    for movie in sorted((ROOT / "videos").glob("*/*.mp4")):
+    for movie in sorted((OUTPUT / "videos").glob("*/*.mp4")):
         target = destination / movie.parent.name / movie.stem
         target.mkdir(parents=True, exist_ok=True)
         print(f"Images: {movie.parent.name}/{movie.stem} -> {target}", flush=True)

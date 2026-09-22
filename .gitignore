@@ -8,7 +8,6 @@ case/constant/boundaryData/
 case/postProcessing/
 case/postProcessing-*/
 case/log.*
-case/wake_summary.*
 case/*.foam
 case/dynamicCode/
 
@@ -31,12 +30,10 @@ __pycache__/
 .pytest_cache/
 .venv/
 
-# Locally generated plots and videos
-artifacts/
-videos/
-images/
-*_videos/
-*.mp4
+# Locally generated post-processing outputs
+postprocessing/videos/
+postprocessing/images/
+postprocessing/artifacts/
 
 # Editors and OS
 .DS_Store

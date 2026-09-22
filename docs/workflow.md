@@ -24,7 +24,9 @@
 The case no longer contains the in-solver VTK/X11 renderer, which could
 terminate MPI when no authorised display was available. Keep CFD and image
 production separate. Run `python3 scripts/postprocess.py all` after
-the calculation for headless videos and resolved-TKE/IDDES diagnostics. This
+the calculation for headless videos and resolved-TKE/IDDES diagnostics. The
+user-facing output is grouped in `postprocessing/videos/`,
+`postprocessing/images/` and `postprocessing/artifacts/`. This
 uses all complete retained checkpoints, and `purgeWrite 0` prevents future
 production runs from silently discarding early frames. Monitor disk usage.
 The video renderer uses the former full-frame colour-map style at 3840-pixel

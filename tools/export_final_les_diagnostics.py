@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 BASE = ROOT / "case/postProcessing/wakePlanes"
 TIME = max((p.name for p in BASE.iterdir() if p.is_dir()), key=float) if BASE.is_dir() else ""
 SOURCE = BASE / TIME
-OUT = ROOT / "artifacts"
+OUT = ROOT / "postprocessing" / "artifacts"
 
 CFG = load_config()
 D = float(CFG["turbine"]["diameter"])

@@ -64,6 +64,7 @@ scripts/              environment, mesh, run and cleanup scripts
 tools/                dictionary generation, Mann inflow and post-processing
 tests/                configuration and rendering tests
 docs/                 model description and acceptance workflow
+postprocessing/       generated videos, images and LES/wake artifacts
 ```
 
 Generated OpenFOAM dictionaries are derived from `config/case.yaml`; edit the
@@ -166,15 +167,23 @@ After the run, with OpenFOAM v2412 sourced and the Python environment active,
 use one headless command for all checkpoint videos and turbulence diagnostics:
 
 ```bash
-python3 scripts/postprocess.py all
+make postprocess
 ```
 
-This samples only the local decomposed case, produces individual MP4s under
-`videos/<field>/`, combined videos under `videos/main/`, and 4K PNG frames under
-`images/<field>/<view>/` (indexed by `images/checkpoint_times.csv`), and writes resolved
-TKE/IDDES maps and `les-diagnostics-timeseries.csv` under `artifacts/`. It uses
-every complete checkpoint that still
-exists on all ranks and reports the exact time range. The separate actions
+This samples only the local decomposed case and collects user-facing results in
+`postprocessing/`:
+
+```text
+postprocessing/
+├── videos/       MP4s by field, plus main/ combined views
+├── images/       4K PNGs by field and view; checkpoint_times.csv maps frames to time
+└── artifacts/    resolved-TKE/IDDES maps, time series and wake summaries
+```
+
+The intermediate OpenFOAM cutting planes remain under `case/postProcessing/`;
+they are not a second case or a second output workflow. The script uses every
+complete checkpoint that still exists on all ranks and reports the exact time
+range. The separate actions
 `status`, `sample`, `videos`, `images`, `diagnostics`, and `verify` support inspection or
 resuming an interrupted post-processing job. The workflow verifies that every
 video contains one frame per retained checkpoint. It never reads images from
