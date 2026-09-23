@@ -62,7 +62,6 @@ config/case.yaml      single source of truth for case parameters
 data/                 NREL Phase VI blade geometry and S809 polar
 scripts/              environment, mesh, run and cleanup scripts
 tools/                dictionary generation, Mann inflow and post-processing
-tests/                configuration and rendering tests
 docs/                 model description and acceptance workflow
 postprocessing/       generated videos, images and LES/wake artifacts
 ```
@@ -110,7 +109,6 @@ source .venv/bin/activate
 python3 -m pip install -r requirements.txt
 
 python3 tools/generate_case.py
-python3 -m unittest discover -s tests -v
 ./scripts/check_environment.sh
 ```
 
@@ -122,14 +120,9 @@ the presence of `libturbinesFoam.so` and consistency of the generated files.
 The smoke profile uses a coarse mesh, uniform inflow and four MPI ranks. It is
 intended to catch setup or runtime errors, not to produce physical results.
 
-`make test` and `make smoke` serve different purposes. The unit tests finish in
-well under a second and validate configuration arithmetic and generated text:
-cell count and 25-million limit, turbine placement and twist convention,
-IDDES/numerical settings, retained checkpoints, post-processing views and
-output paths. They do not launch OpenFOAM or create CFD data. The smoke test
-actually launches a short coarse OpenFOAM calculation and therefore checks the
-solver, MPI and `turbinesFoam` integration. Keeping both prevents configuration
-errors from reaching an expensive production run.
+The repository intentionally has no duplicated unit-test expectations for case
+parameters. Use `make check-env` for generated-file and dependency checks, and
+`make smoke` when a short real OpenFOAM run is required before production.
 
 ```bash
 make smoke
@@ -208,7 +201,6 @@ The already-completed run has 64 retained checkpoints from 26 to
 
 ```bash
 make generate    # render the production dictionaries
-make test        # run unit and consistency checks
 make check-env   # validate OpenFOAM and turbinesFoam
 make mesh        # build and validate the production mesh
 make smoke       # execute the coarse uniform-inflow smoke test

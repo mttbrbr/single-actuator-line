@@ -3,8 +3,7 @@
 1. Source the intended OpenFOAM.com v2412 environment.
 2. Ensure $FOAM_USER_LIBBIN/libturbinesFoam.so already exists. No ALM source
    checkout or build step belongs to this repository.
-3. Run python3 tools/generate_case.py and
-   python3 -m unittest discover -s tests -v.
+3. Run `python3 tools/generate_case.py` and `make check-env`.
 4. Run scripts/mesh.sh. Acceptance requires:
    - Mesh OK;
    - exactly the number of cells derived from `mesh.cells_per_D` in YAML
