@@ -182,8 +182,10 @@ def frame(path: Path, view: str, field: str, time: Decimal, cfg: dict) -> np.nda
         x = points[:, 0] / d
         y = points[:, 1] / d
         extent = (-0.5, 7.5, -1.5, 1.5)
-    # Match the D/48 core mesh; finer bins would leave unsampled stripe artefacts.
-    nx, ny = (144, 72) if view.startswith("wake_") else (384, 144)
+    # Match the configured core mesh; finer bins would invent display detail.
+    cells_per_d = int(cfg["mesh"]["cells_per_D"])
+    nx, ny = ((3 * cells_per_d, round(1.5 * cells_per_d))
+              if view.startswith("wake_") else (8 * cells_per_d, 3 * cells_per_d))
     valid = np.isfinite(x) & np.isfinite(y) & np.isfinite(values)
     xedges = np.linspace(extent[0], extent[1], nx + 1)
     yedges = np.linspace(extent[2], extent[3], ny + 1)
@@ -209,7 +211,8 @@ def frame(path: Path, view: str, field: str, time: Decimal, cfg: dict) -> np.nda
     lo, hi = display_range(view, field)
     rendered = ax.imshow(image, origin="lower", extent=extent, aspect="auto",
                          cmap="coolwarm" if field != "vorticity" else "inferno",
-                         vmin=lo, vmax=hi, interpolation="nearest")
+                         vmin=lo, vmax=hi,
+                         interpolation="bilinear")
     ax.set_axis_off()
     ax.text(0.025, 0.972, f"NREL Phase VI  |  {view.replace('_', ' ')}  |  t = {time} s",
             transform=ax.transAxes, color="white", fontsize=16, va="top")

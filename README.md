@@ -45,8 +45,8 @@ the actuator-line implementation.
 | Resolved inlet turbulence | Mann model, 10% longitudinal TI, `D/16` transverse sampling |
 | CFD solver | `pimpleFoam` |
 | Turbulence model | `kOmegaSSTIDDES` |
-| Current mesh (`mesh.cells_per_D: 48`) | 22,525,776 hexahedral cells |
-| Rotor/wake core resolution | `D/48`, configurable in YAML |
+| Current mesh (`mesh.cells_per_D: 53`) | 30,376,404 hexahedral cells |
+| Rotor/wake core resolution | `D/53`, configurable in YAML |
 | Simulated time | 57.5 s |
 | Statistics window | 28.75–57.5 s |
 | Parallel decomposition | 12 ranks |
@@ -72,10 +72,10 @@ by hand.
 
 To choose a different mesh, edit just `mesh.cells_per_D` in
 `config/case.yaml`, then run `make generate && make mesh` **before starting a
-new simulation**. For example, 32 gives 6,674,304 cells, 40 gives
-13,022,100, and the current 48 gives 22,525,776. The validator rejects
-resolutions above `mesh.max_cells: 25000000`. Never change this setting in the
-middle of a run: the existing mesh and checkpoints belong to the old value.
+new simulation**. For example, 32 gives 6,674,304 cells, 48 gives 22,525,776,
+and the current 53 gives 30,376,404. The validator rejects resolutions above
+`mesh.max_cells: 31000000`. Never resume old checkpoints after changing this
+setting: the existing mesh and checkpoints belong to the old value.
 
 ## Requirements
 
@@ -192,8 +192,9 @@ video contains one frame per retained checkpoint. It never reads images from
 another case.
 The display raster interpolates between sampled plane points; this affects only
 the video image, not the CFD fields or quantitative LES diagnostics. Final
-display upscaling uses nearest-neighbour pixels rather than bicubic smoothing;
-cross-wake vorticity views use a wider 0–8 s⁻¹ scale to retain compact vortices.
+display upscaling uses a minimal bilinear interpolation: it removes visible
+pixel blocks without the stronger smoothing of bicubic interpolation.
+Cross-wake vorticity views use a wider 0–8 s⁻¹ scale to retain compact vortices.
 The already-completed run has 64 retained checkpoints from 26 to
 57.5 s; earlier fields were purged and cannot be reconstructed.
 

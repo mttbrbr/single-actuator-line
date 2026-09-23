@@ -7,7 +7,7 @@
 4. Run scripts/mesh.sh. Acceptance requires:
    - Mesh OK;
    - exactly the number of cells derived from `mesh.cells_per_D` in YAML
-     (22,525,776 at the current value 48; maximum 25 million);
+     (30,376,404 at the current value 53; maximum 31 million);
    - all cells hexahedral;
    - maximum non-orthogonality at numerical zero.
 5. Generate the Mann box with python3 tools/generate_mann_inflow.py.

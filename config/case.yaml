@@ -23,11 +23,11 @@ domain_D:
   z: [0.0, 5.0]
 
 mesh:
-  # Change only this value to choose the core resolution. 48 = current 22.5M
-  # case; 32 = 6.67M cells. 49 is under, 50 exceeds the 25M-cell budget.
-  cells_per_D: 48
+  # Change only this value to choose the core resolution. 53 = current 30.38M
+  # case; 48 = 22.53M and 32 = 6.67M cells.
+  cells_per_D: 53
   reference_cells_per_D: 48
-  max_cells: 25000000
+  max_cells: 31000000
   x:
     breaks_D: [-5.0, -0.5, 8.0, 15.0]
     cells: [75, 408, 90]
@@ -55,7 +55,7 @@ mann:
   high_frequency_compensation: 0
   duration: 57.7
   sample_dt: 0.1
-  # D/16 transverse sampling: three inlet samples across each D/48 core cell.
+  # D/16 transverse sampling: one Mann sample spans about 3.3 D/53 core cells.
   dy_D: 0.0625
   dz_D: 0.0625
   double_xyz: [false, true, true]
