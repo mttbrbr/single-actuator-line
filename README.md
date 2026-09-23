@@ -122,6 +122,15 @@ the presence of `libturbinesFoam.so` and consistency of the generated files.
 The smoke profile uses a coarse mesh, uniform inflow and four MPI ranks. It is
 intended to catch setup or runtime errors, not to produce physical results.
 
+`make test` and `make smoke` serve different purposes. The unit tests finish in
+well under a second and validate configuration arithmetic and generated text:
+cell count and 25-million limit, turbine placement and twist convention,
+IDDES/numerical settings, retained checkpoints, post-processing views and
+output paths. They do not launch OpenFOAM or create CFD data. The smoke test
+actually launches a short coarse OpenFOAM calculation and therefore checks the
+solver, MPI and `turbinesFoam` integration. Keeping both prevents configuration
+errors from reaching an expensive production run.
+
 ```bash
 make smoke
 ```
@@ -189,7 +198,9 @@ resuming an interrupted post-processing job. The workflow verifies that every
 video contains one frame per retained checkpoint. It never reads images from
 another case.
 The display raster interpolates between sampled plane points; this affects only
-the video image, not the CFD fields or quantitative LES diagnostics.
+the video image, not the CFD fields or quantitative LES diagnostics. Final
+display upscaling uses nearest-neighbour pixels rather than bicubic smoothing;
+cross-wake vorticity views use a wider 0–8 s⁻¹ scale to retain compact vortices.
 The already-completed run has 64 retained checkpoints from 26 to
 57.5 s; earlier fields were purged and cannot be reconstructed.
 

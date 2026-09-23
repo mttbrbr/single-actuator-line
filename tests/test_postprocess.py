@@ -25,6 +25,10 @@ class PostprocessTests(unittest.TestCase):
         self.assertEqual(postprocess.video_size("hub"), (3840, 1440))
         self.assertEqual(postprocess.video_size("wake_2D"), (3840, 1920))
 
+    def test_vorticity_scale_distinguishes_cross_wake_vortices(self):
+        self.assertEqual(postprocess.display_range("hub", "vorticity"), (0.0, 2.0))
+        self.assertEqual(postprocess.display_range("wake_2D", "vorticity"), (0.0, 8.0))
+
     def test_all_presented_outputs_have_one_parent(self):
         self.assertEqual(postprocess.OUTPUT, ROOT / "postprocessing")
         self.assertEqual(postprocess.OUTPUT / "videos", ROOT / "postprocessing/videos")

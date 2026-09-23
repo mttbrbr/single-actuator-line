@@ -25,7 +25,7 @@ VIEWS = ("horizontal_minus_025D", "hub", "horizontal_plus_025D",
 FIELDS = ("velocity", "vorticity", "pressure_coefficient", "q_criterion")
 ARRAYS = {"velocity": "U", "vorticity": "vorticity",
           "pressure_coefficient": "Cp", "q_criterion": "Q"}
-RANGES = {"velocity": (4.0, 8.5), "vorticity": (0.0, 2.0),
+RANGES = {"velocity": (4.0, 8.5),
           "pressure_coefficient": (-0.4, 0.8), "q_criterion": (0.0, 0.5)}
 LABELS = {"velocity": "|U| (m/s)", "vorticity": "|ω| (1/s)",
           "pressure_coefficient": "Cp", "q_criterion": "Q (1/s²)"}
@@ -33,6 +33,14 @@ LABELS = {"velocity": "|U| (m/s)", "vorticity": "|ω| (1/s)",
 
 def video_size(view: str) -> tuple[int, int]:
     return (3840, 1920) if view.startswith("wake_") else (3840, 1440)
+
+
+def display_range(view: str, field: str) -> tuple[float, float]:
+    if field == "vorticity":
+        # Cross-wake planes contain compact tip/root vortices up to ~20 1/s;
+        # a wider scale avoids clipping them into one diffuse saturated patch.
+        return (0.0, 8.0) if view.startswith("wake_") else (0.0, 2.0)
+    return RANGES[field]
 
 
 def config() -> dict:
@@ -198,10 +206,10 @@ def frame(path: Path, view: str, field: str, time: Decimal, cfg: dict) -> np.nda
     fig = plt.Figure(figsize=(width / 100, height / 100), dpi=100, facecolor="#f3d0bb")
     canvas = FigureCanvasAgg(fig)
     ax = fig.add_axes((0, 0, 1, 1))
-    lo, hi = RANGES[field]
+    lo, hi = display_range(view, field)
     rendered = ax.imshow(image, origin="lower", extent=extent, aspect="auto",
                          cmap="coolwarm" if field != "vorticity" else "inferno",
-                         vmin=lo, vmax=hi, interpolation="bicubic")
+                         vmin=lo, vmax=hi, interpolation="nearest")
     ax.set_axis_off()
     ax.text(0.025, 0.972, f"NREL Phase VI  |  {view.replace('_', ' ')}  |  t = {time} s",
             transform=ax.transAxes, color="white", fontsize=16, va="top")
