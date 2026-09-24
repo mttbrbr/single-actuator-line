@@ -23,12 +23,6 @@ POST = CASE / "postProcessing" / "videoPlanes"
 OUTPUT = ROOT / "postprocessing"
 VIEWS = ("horizontal_minus_025D", "hub", "horizontal_plus_025D",
          "wake_1D", "wake_2D", "wake_4D", "wake_6D", "wake_8D")
-DOMAIN_VIEWS = {
-    "domain_horizontal_minus_025D": "horizontal_minus_025D",
-    "domain_hub": "hub",
-    "domain_horizontal_plus_025D": "horizontal_plus_025D",
-}
-RENDER_VIEWS = VIEWS + tuple(DOMAIN_VIEWS)
 FIELDS = ("velocity", "vorticity", "pressure_coefficient", "q_criterion")
 ARRAYS = {"velocity": "U", "vorticity": "vorticity",
           "pressure_coefficient": "Cp", "q_criterion": "Q"}
@@ -39,9 +33,7 @@ LABELS = {"velocity": "|U| (m/s)", "vorticity": "|ω| (1/s)",
 
 
 def video_size(view: str) -> tuple[int, int]:
-    if view.startswith("domain_"):
-        return (3840, 1536)
-    return (3840, 1920) if view.startswith("wake_") else (3840, 1440)
+    return (3840, 1920) if view.startswith("wake_") else (3840, 1536)
 
 
 def display_range(view: str, field: str) -> tuple[float, float]:
@@ -205,24 +197,18 @@ def frame(path: Path, view: str, field: str, time: Decimal, cfg: dict) -> np.nda
         x = points[:, 1] / d
         y = (points[:, 2] - h) / d
         extent = (-1.5, 1.5, -0.75, 0.75)
-    elif view.startswith("domain_"):
+    else:
         x = points[:, 0] / d
         y = points[:, 1] / d
         extent = (*map(float, cfg["domain_D"]["x"]),
                   *map(float, cfg["domain_D"]["y"]))
-    else:
-        x = points[:, 0] / d
-        y = points[:, 1] / d
-        extent = (-0.5, 7.5, -1.5, 1.5)
     # Match the configured core mesh; finer bins would invent display detail.
     cells_per_d = actual_cells_per_d(cfg)
     if view.startswith("wake_"):
         nx, ny = 3 * cells_per_d, round(1.5 * cells_per_d)
-    elif view.startswith("domain_"):
+    else:
         nx = round((extent[1] - extent[0]) * cells_per_d)
         ny = round((extent[3] - extent[2]) * cells_per_d)
-    else:
-        nx, ny = 8 * cells_per_d, 3 * cells_per_d
     valid = np.isfinite(x) & np.isfinite(y) & np.isfinite(values)
     xedges = np.linspace(extent[0], extent[1], nx + 1)
     yedges = np.linspace(extent[2], extent[3], ny + 1)
@@ -276,9 +262,8 @@ def video(args: argparse.Namespace, checkpoints: list[Decimal]) -> None:
     available = [t for t in checkpoints if t in sampled]
     if available != checkpoints:
         raise RuntimeError(f"videoPlanes has {len(available)}/{len(checkpoints)} checkpoints. Run sample first; missing {sorted(set(checkpoints)-set(available))[:5]}")
-    for view in RENDER_VIEWS:
+    for view in VIEWS:
         view_fields = FIELDS if not view.startswith("wake_") else FIELDS[:2]
-        source_view = DOMAIN_VIEWS.get(view, view)
         for field in view_fields:
             destination = output / field / f"{view}.mp4"
             print(f"{view}/{field}: {len(checkpoints)} frames, {checkpoints[0]}..{checkpoints[-1]} -> {destination}", flush=True)
@@ -292,7 +277,7 @@ def video(args: argparse.Namespace, checkpoints: list[Decimal]) -> None:
             process = subprocess.Popen(command, stdin=subprocess.PIPE)
             try:
                 for t in checkpoints:
-                    path = POST / str(t) / f"{source_view}.vtp"
+                    path = POST / str(t) / f"{view}.vtp"
                     if not path.is_file():
                         raise RuntimeError(f"Missing sampled plane: {path}")
                     process.stdin.write(frame(path, view, field, t, cfg).tobytes())
@@ -309,10 +294,7 @@ def video(args: argparse.Namespace, checkpoints: list[Decimal]) -> None:
         for field in view_fields:
             inputs += ["-i", str(output / field / f"{view}.mp4")]
         n = len(view_fields)
-        if view.startswith("domain_"):
-            width, height = 1920, 768
-        else:
-            width, height = (1920, 720) if n == 4 else (1920, 960)
+        width, height = (1920, 768) if n == 4 else (1920, 960)
         filters = []
         for i in range(n):
             filters.append(f"[{i}:v]scale={width}:{height}[v{i}]")
@@ -342,8 +324,7 @@ def verify_videos(checkpoints: list[Decimal]) -> None:
     ffprobe = shutil.which("ffprobe")
     if ffprobe is None:
         raise RuntimeError("ffprobe is required to verify the videos")
-    expected = (sum(2 if view.startswith("wake_") else 4 for view in RENDER_VIEWS)
-                + len(RENDER_VIEWS))
+    expected = sum(2 if view.startswith("wake_") else 4 for view in VIEWS) + len(VIEWS)
     paths = sorted((OUTPUT / "videos").glob("*/*.mp4"))
     if len(paths) != expected:
         raise RuntimeError(f"Expected {expected} videos, found {len(paths)}")
