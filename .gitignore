@@ -38,3 +38,6 @@ postprocessing/artifacts/
 # Editors and OS
 .DS_Store
 *~
+
+# Private newsletter drafts
+docs/newsletter-*.md
