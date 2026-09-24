@@ -195,6 +195,10 @@ the video image, not the CFD fields or quantitative LES diagnostics. Final
 display upscaling uses a minimal bilinear interpolation: it removes visible
 pixel blocks without the stronger smoothing of bicubic interpolation.
 Cross-wake vorticity views use a wider 0–8 s⁻¹ scale to retain compact vortices.
+In addition to the wake-detail views, `domain_horizontal_minus_025D`,
+`domain_hub` and `domain_horizontal_plus_025D` cover the complete
+`[-5D,15D] × [-4D,4D]` horizontal domain, including the inlet. Vorticity uses
+a black–red–yellow colour map without a purple interval.
 The already-completed run has 64 retained checkpoints from 26 to
 57.5 s; earlier fields were purged and cannot be reconstructed.
 
